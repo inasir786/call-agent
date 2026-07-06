@@ -70,6 +70,19 @@ export default function Leads() {
     }
   }
 
+  const deleteLead = async (lead) => {
+    if (!window.confirm(`Permanently delete ${lead.full_name || lead.phone}? This also deletes all of their call history and cannot be undone.`)) {
+      return
+    }
+    try {
+      await api(`/api/leads/${lead.id}`, { method: "DELETE" })
+      setMessage("Lead deleted")
+      load()
+    } catch (err) {
+      setMessage(err.message)
+    }
+  }
+
   const doSearch = () => {
     setPage(1)
     load().catch((err) => setMessage(err.message))
@@ -90,15 +103,15 @@ export default function Leads() {
     fileRef.current.value = ""
   }
 
-  const exportQualified = async () => {
-    const response = await fetch("/api/export/qualified", {
+  const exportCsv = async (path, filename) => {
+    const response = await fetch(path, {
       headers: { Authorization: `Bearer ${getToken()}` },
     })
     const blob = await response.blob()
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = "qualified_leads.csv"
+    link.download = filename
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -118,7 +131,8 @@ export default function Leads() {
           <button className="btn" onClick={resetAll} disabled={resetting}>
             {resetting ? "Resetting..." : "Reset all to pending"}
           </button>
-          <button className="btn primary" onClick={exportQualified}>Export qualified leads</button>
+          <button className="btn" onClick={() => exportCsv("/api/export/all", "all_leads.csv")}>Export all leads</button>
+          <button className="btn primary" onClick={() => exportCsv("/api/export/qualified", "qualified_leads.csv")}>Export qualified leads</button>
         </div>
       </div>
       {crmStatus && (
@@ -164,7 +178,11 @@ export default function Leads() {
               <td>{lead.program_of_interest || <span className="muted">—</span>}</td>
               <td><StatusBadge status={lead.status} /></td>
               <td>{lead.wants_callback ? "Yes" : "—"}</td>
-              <td><Link to={`/leads/${lead.id}`}>View</Link></td>
+              <td>
+                <Link to={`/leads/${lead.id}`}>View</Link>
+                {" · "}
+                <a href="#" onClick={(e) => { e.preventDefault(); deleteLead(lead) }} className="danger-link">Delete</a>
+              </td>
             </tr>
           ))}
           {data.items.length === 0 && (

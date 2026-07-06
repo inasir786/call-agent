@@ -61,6 +61,18 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+      <div className="card narrow">
+        <h2>Program of interest</h2>
+        {(stats.by_program || []).length === 0 && (
+          <p className="muted">No program data collected yet.</p>
+        )}
+        {(stats.by_program || []).map(({ program, count }) => (
+          <div className="program-row" key={program}>
+            <span>{program}</span>
+            <span className="muted">{count}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

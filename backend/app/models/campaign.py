@@ -12,4 +12,5 @@ class Campaign(Base):
     calling_end_hour = Column(Integer, default=19)
     max_concurrent_calls = Column(Integer, default=5)
     max_retries = Column(Integer, default=3)
+    scheduled_start_at = Column(DateTime, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

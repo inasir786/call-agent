@@ -1,0 +1,11 @@
+Restart the backend — pick up the new CRM status/sync endpoints:
+
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8001
+Verify the CRM banner — refresh the admin panel's Leads page and confirm the "X synced, Y pending" status shows up.
+Fill in client-specific script content — replace [Institute Name] and the program list placeholders in assistant_prompt.py.
+Add real Vapi credentials — VAPI_API_KEY, VAPI_PHONE_NUMBER_ID, and VAPI_SERVER_URL (currently blank in .env).
+Set CRM_WEBHOOK_URL if you have a real CRM endpoint to sync to — otherwise the Sync CRM button stays disabled by design.
+Confirm the voice — listen to the placeholder Urdu voice (azure / ur-PK-UzmaNeural) and swap it if needed.
+Run end-to-end test calls to a couple of real numbers to validate the full flow: call → transcript → structured data extraction → lead status update → CRM sync → export.
+Pilot with ~100 leads before scaling to the full list, per the original plan.
+Want me to help with any of these right now — e.g. wiring up real credentials once you have them, or drafting the CRM webhook payload format?

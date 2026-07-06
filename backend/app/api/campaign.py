@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.config.database import get_db
-from app.schemas.schemas import CampaignOut, CampaignUpdate, StatsOut
+from app.schemas.schemas import CampaignOut, CampaignUpdate, CampaignSchedule, StatsOut
 from app.services import campaign_service, lead_service
 from app.utils.security import require_admin
 
@@ -34,3 +34,13 @@ def pause(db: Session = Depends(get_db)):
 @router.patch("", response_model=CampaignOut)
 def update(payload: CampaignUpdate, db: Session = Depends(get_db)):
     return campaign_service.update_settings(db, payload.model_dump())
+
+
+@router.post("/schedule", response_model=CampaignOut)
+def schedule(payload: CampaignSchedule, db: Session = Depends(get_db)):
+    return campaign_service.set_schedule(db, payload.scheduled_start_at)
+
+
+@router.post("/schedule/cancel", response_model=CampaignOut)
+def cancel_schedule(db: Session = Depends(get_db)):
+    return campaign_service.cancel_schedule(db)

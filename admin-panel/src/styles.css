@@ -209,6 +209,13 @@ dd { font-weight: 500; }
   padding: 14px 0;
 }
 .call-item:first-of-type { border-top: none; padding-top: 0; }
+.program-row {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+}
+.program-row:first-of-type { border-top: none; padding-top: 0; }
 .call-meta { display: flex; gap: 14px; font-size: 13px; margin-bottom: 8px; }
 .audio { width: 100%; margin: 8px 0; }
 .transcript {
@@ -225,6 +232,9 @@ details summary { cursor: pointer; color: var(--pine); font-weight: 500; font-si
 
 .back { color: var(--muted); text-decoration: none; font-size: 14px; display: inline-block; margin-bottom: 12px; }
 .back:hover { color: var(--pine); }
+
+.danger-link { color: var(--red); text-decoration: none; }
+.danger-link:hover { text-decoration: underline; }
 
 .login-wrap {
   min-height: 100vh;

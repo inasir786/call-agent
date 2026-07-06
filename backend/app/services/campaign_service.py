@@ -40,6 +40,35 @@ def update_settings(db: Session, updates: dict) -> Campaign:
     return campaign
 
 
+def set_schedule(db: Session, when: datetime) -> Campaign:
+    campaign = get_campaign(db)
+    campaign.scheduled_start_at = when
+    campaign.is_running = False
+    db.commit()
+    db.refresh(campaign)
+    return campaign
+
+
+def cancel_schedule(db: Session) -> Campaign:
+    campaign = get_campaign(db)
+    campaign.scheduled_start_at = None
+    db.commit()
+    db.refresh(campaign)
+    return campaign
+
+
+def apply_due_schedule(db: Session, campaign: Campaign) -> Campaign:
+    if campaign.is_running or not campaign.scheduled_start_at:
+        return campaign
+    now = datetime.now(ZoneInfo(settings.timezone)).replace(tzinfo=None)
+    if now >= campaign.scheduled_start_at:
+        campaign.is_running = True
+        campaign.scheduled_start_at = None
+        db.commit()
+        db.refresh(campaign)
+    return campaign
+
+
 def within_calling_hours(campaign: Campaign) -> bool:
     now = datetime.now(ZoneInfo(settings.timezone))
     return campaign.calling_start_hour <= now.hour < campaign.calling_end_hour

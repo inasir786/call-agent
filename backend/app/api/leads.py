@@ -51,3 +51,13 @@ def lead_detail(lead_id: int, db: Session = Depends(get_db)):
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     return lead
+
+
+@router.delete("/{lead_id}")
+def delete_lead(lead_id: int, db: Session = Depends(get_db)):
+    lead = db.query(Lead).filter(Lead.id == lead_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    db.delete(lead)
+    db.commit()
+    return {"deleted": True}

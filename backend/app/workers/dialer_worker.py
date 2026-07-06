@@ -22,6 +22,7 @@ async def _tick():
     db = SessionLocal()
     try:
         campaign = campaign_service.get_campaign(db)
+        campaign = campaign_service.apply_due_schedule(db, campaign)
         if not campaign.is_running:
             return
         if not campaign_service.within_calling_hours(campaign):

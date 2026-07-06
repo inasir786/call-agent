@@ -1,16 +1,25 @@
 import { useEffect, useState } from "react"
-import { useParams, Link } from "react-router-dom"
+import { useParams, useNavigate, Link } from "react-router-dom"
 import { api } from "../api/client"
 import StatusBadge from "../components/StatusBadge"
 
 export default function LeadDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [lead, setLead] = useState(null)
   const [error, setError] = useState("")
 
   useEffect(() => {
     api(`/api/leads/${id}`).then(setLead).catch((err) => setError(err.message))
   }, [id])
+
+  const deleteLead = async () => {
+    if (!window.confirm(`Permanently delete ${lead.full_name || lead.phone}? This also deletes all of their call history and cannot be undone.`)) {
+      return
+    }
+    await api(`/api/leads/${id}`, { method: "DELETE" })
+    navigate("/leads")
+  }
 
   if (error) return <div className="error">{error}</div>
   if (!lead) return <div className="muted">Loading...</div>
@@ -20,7 +29,10 @@ export default function LeadDetail() {
       <Link to="/leads" className="back">← Back to leads</Link>
       <div className="page-head">
         <h1>{lead.full_name || lead.phone}</h1>
-        <StatusBadge status={lead.status} />
+        <div className="actions">
+          <StatusBadge status={lead.status} />
+          <button className="btn danger" onClick={deleteLead}>Delete lead</button>
+        </div>
       </div>
       <div className="detail-grid">
         <div className="card">

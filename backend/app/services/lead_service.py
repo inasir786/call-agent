@@ -63,6 +63,13 @@ def get_stats(db: Session) -> dict:
         db.query(Lead.status, func.count(Lead.id)).group_by(Lead.status).all()
     )
     total_calls = db.query(func.count(Call.id)).scalar() or 0
+    program_counts = (
+        db.query(Lead.program_of_interest, func.count(Lead.id))
+        .filter(Lead.program_of_interest.isnot(None), Lead.program_of_interest != "")
+        .group_by(Lead.program_of_interest)
+        .order_by(func.count(Lead.id).desc())
+        .all()
+    )
     return {
         "total": sum(counts.values()),
         "pending": counts.get(LeadStatus.pending, 0),
@@ -73,4 +80,5 @@ def get_stats(db: Session) -> dict:
         "invalid": counts.get(LeadStatus.invalid, 0),
         "failed": counts.get(LeadStatus.failed, 0),
         "total_calls_made": total_calls,
+        "by_program": [{"program": program, "count": count} for program, count in program_counts],
     }

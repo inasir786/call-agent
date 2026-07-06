@@ -70,6 +70,7 @@ class CampaignOut(BaseModel):
     calling_end_hour: int
     max_concurrent_calls: int
     max_retries: int
+    scheduled_start_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -82,6 +83,10 @@ class CampaignUpdate(BaseModel):
     max_retries: Optional[int] = None
 
 
+class CampaignSchedule(BaseModel):
+    scheduled_start_at: datetime
+
+
 class CrmStatusOut(BaseModel):
     configured: bool
     synced: int
@@ -90,6 +95,11 @@ class CrmStatusOut(BaseModel):
 
 class CrmSyncResult(BaseModel):
     synced: int
+
+
+class ProgramCount(BaseModel):
+    program: str
+    count: int
 
 
 class StatsOut(BaseModel):
@@ -103,3 +113,4 @@ class StatsOut(BaseModel):
     failed: int
     total_calls_made: int
     is_running: bool
+    by_program: List[ProgramCount] = []
