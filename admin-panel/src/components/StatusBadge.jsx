@@ -6,6 +6,7 @@ const LABELS = {
   not_interested: "Not interested",
   invalid: "Invalid",
   failed: "Unreachable",
+  needs_review: "Needs review",
 }
 
 export default function StatusBadge({ status }) {

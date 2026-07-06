@@ -3,7 +3,7 @@ import { Link } from "react-router-dom"
 import { api, getToken } from "../api/client"
 import StatusBadge from "../components/StatusBadge"
 
-const STATUSES = ["", "pending", "calling", "no_answer", "qualified", "not_interested", "failed", "invalid"]
+const STATUSES = ["", "pending", "calling", "no_answer", "qualified", "not_interested", "needs_review", "failed", "invalid"]
 
 export default function Leads() {
   const [data, setData] = useState({ total: 0, items: [] })

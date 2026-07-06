@@ -179,6 +179,7 @@ label {
 .badge-qualified { background: #e3f2e8; color: var(--pine); }
 .badge-not_interested { background: #f7e6e2; color: var(--red); }
 .badge-invalid, .badge-failed { background: #ece9e9; color: #7a6a68; }
+.badge-needs_review { background: #fde3cf; color: #9a4d0f; }
 
 .pager {
   display: flex; align-items: center; justify-content: space-between;
@@ -229,6 +230,8 @@ dd { font-weight: 500; }
   overflow: auto;
 }
 details summary { cursor: pointer; color: var(--pine); font-weight: 500; font-size: 14px; }
+
+.warning-glyph { color: #9a4d0f; cursor: help; }
 
 .back { color: var(--muted); text-decoration: none; font-size: 14px; display: inline-block; margin-bottom: 12px; }
 .back:hover { color: var(--pine); }
