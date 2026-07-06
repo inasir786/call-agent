@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Enum, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Enum, Boolean, JSON
 from sqlalchemy.orm import relationship
 from app.config.database import Base
 
@@ -13,6 +13,7 @@ class LeadStatus(str, enum.Enum):
     not_interested = "not_interested"
     invalid = "invalid"
     failed = "failed"
+    needs_review = "needs_review"
 
 
 class Lead(Base):
@@ -29,6 +30,10 @@ class Lead(Base):
     next_retry_at = Column(DateTime, nullable=True)
     crm_id = Column(String, nullable=True)
     crm_synced = Column(Boolean, default=False)
+    review_reason = Column(String, nullable=True)
+    field_confidence = Column(JSON, nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    reviewed_by = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

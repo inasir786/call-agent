@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +7,8 @@ from app.config.database import Base, engine
 from app.api import auth, leads, campaign, webhooks, export, crm
 from app.workers.dialer_worker import dialer_loop
 import app.models
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
 @asynccontextmanager

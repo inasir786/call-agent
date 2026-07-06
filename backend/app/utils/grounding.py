@@ -25,8 +25,7 @@ def _email_grounded(value: str, transcript: str) -> bool:
     local_part, _, domain = value.partition("@")
     if not domain:
         return _fuzzy_present(value, transcript, 0.72)
-    domain_tokens = re.split(r"\.", domain)
-    tokens = [local_part] + domain_tokens
+    tokens = re.split(r"[.\-_]", local_part) + re.split(r"\.", domain)
     return all(token and token in transcript for token in tokens)
 
 

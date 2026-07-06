@@ -88,7 +88,6 @@ def build_assistant() -> dict:
                 "enabled": True,
                 "schema": ANALYSIS_SCHEMA,
                 "messages": [{"role": "system", "content": ANALYSIS_INSTRUCTIONS}],
-                "model": {"provider": "openai", "model": "gpt-4o", "temperature": 0},
             }
         },
         "endCallFunctionEnabled": True,

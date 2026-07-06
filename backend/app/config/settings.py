@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     max_retries: int = 3
     retry_gap_hours: int = 3
     timezone: str = "Asia/Karachi"
+    qa_sample_rate: float = 0.05
 
     class Config:
         env_file = ".env"

@@ -39,6 +39,10 @@ class LeadOut(BaseModel):
     status: str
     retry_count: int
     crm_synced: bool
+    review_reason: Optional[str] = None
+    field_confidence: Optional[Any] = None
+    reviewed_at: Optional[datetime] = None
+    reviewed_by: Optional[str] = None
     updated_at: datetime
 
     class Config:
@@ -62,6 +66,11 @@ class ImportResult(BaseModel):
 
 class ResetResult(BaseModel):
     reset_count: int
+
+
+class ReviewDecision(BaseModel):
+    decision: str
+    reviewed_by: Optional[str] = None
 
 
 class CampaignOut(BaseModel):

@@ -1,8 +1,9 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.config.database import get_db
-from app.models import Lead
-from app.schemas.schemas import LeadListOut, LeadDetailOut, ImportResult, ResetResult
+from app.models import Lead, LeadStatus
+from app.schemas.schemas import LeadListOut, LeadDetailOut, ImportResult, ResetResult, ReviewDecision
 from app.services import lead_service
 from app.utils.security import require_admin
 
@@ -50,6 +51,22 @@ def lead_detail(lead_id: int, db: Session = Depends(get_db)):
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
+    return lead
+
+
+@router.patch("/{lead_id}/review", response_model=LeadDetailOut)
+def review_lead(lead_id: int, payload: ReviewDecision, db: Session = Depends(get_db)):
+    lead = db.query(Lead).filter(Lead.id == lead_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    if payload.decision not in ("qualified", "not_interested"):
+        raise HTTPException(status_code=400, detail="decision must be 'qualified' or 'not_interested'")
+    lead.status = LeadStatus(payload.decision)
+    lead.review_reason = None
+    lead.reviewed_at = datetime.utcnow()
+    lead.reviewed_by = payload.reviewed_by
+    db.commit()
+    db.refresh(lead)
     return lead
 
 
