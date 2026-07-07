@@ -3,14 +3,6 @@ import { useParams, useNavigate, Link } from "react-router-dom"
 import { api } from "../api/client"
 import StatusBadge from "../components/StatusBadge"
 
-function fieldWarning(lead, field) {
-  const confidence = lead.field_confidence || {}
-  if (confidence[field] && confidence[field].grounded === false) {
-    return <span className="warning-glyph" title="Could not verify this value against the transcript">⚠</span>
-  }
-  return null
-}
-
 export default function LeadDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -53,6 +45,7 @@ export default function LeadDetail() {
       <div className="page-head">
         <h1>{lead.full_name || lead.phone}</h1>
         <div className="actions">
+          {lead.dnc && <span className="badge badge-closed_lost">Do Not Call</span>}
           <StatusBadge status={lead.status} />
           <button className="btn danger" onClick={deleteLead}>Delete lead</button>
         </div>
@@ -63,20 +56,33 @@ export default function LeadDetail() {
             ? "randomly selected for quality-assurance spot-check"
             : lead.review_reason}
           <div className="actions" style={{ marginTop: 10 }}>
-            <button className="btn primary" disabled={reviewing} onClick={() => reviewLead("qualified")}>Confirm qualified</button>
-            <button className="btn" disabled={reviewing} onClick={() => reviewLead("not_interested")}>Confirm not interested</button>
+            <button className="btn primary" disabled={reviewing} onClick={() => reviewLead("reactivated")}>Confirm reactivated</button>
+            <button className="btn" disabled={reviewing} onClick={() => reviewLead("nurture")}>Move to nurture</button>
+            <button className="btn" disabled={reviewing} onClick={() => reviewLead("closed_lost")}>Confirm closed-lost</button>
           </div>
         </div>
       )}
       <div className="detail-grid">
         <div className="card">
           <h2>Collected information</h2>
+          {lead.calls.length === 0 && (
+            <p className="muted">No call has been made to this lead yet — every field below will stay "null" until a call completes.</p>
+          )}
           <dl>
-            <dt>Full name</dt><dd>{lead.full_name || "Not collected"} {fieldWarning(lead, "full_name")}</dd>
+            <dt>Full name</dt><dd>{lead.full_name || "null"}</dd>
             <dt>Phone</dt><dd>{lead.phone}</dd>
-            <dt>Email</dt><dd>{lead.email || "Not collected"} {fieldWarning(lead, "email")}</dd>
-            <dt>Program of interest</dt><dd>{lead.program_of_interest || "Not collected"} {fieldWarning(lead, "program_of_interest")}</dd>
-            <dt>Wants callback</dt><dd>{lead.wants_callback ? "Yes" : "No"}</dd>
+            <dt>Reason</dt><dd>{lead.review_reason || "null"}</dd>
+            <dt>Do not call</dt><dd>{lead.dnc ? "Yes" : "No"}</dd>
+            <dt>Current status</dt><dd>{lead.current_status || "null"}</dd>
+            <dt>Timeline</dt><dd>{lead.timeline || "null"}</dd>
+            <dt>Original blocker</dt><dd>{lead.original_blocker || "null"}</dd>
+            <dt>Last qualification</dt><dd>{lead.last_qualification || "null"}</dd>
+            <dt>Grade / CGPA</dt><dd>{lead.grade_or_cgpa || "null"}</dd>
+            <dt>Meets eligibility baseline</dt>
+            <dd>{lead.meets_baseline === null || lead.meets_baseline === undefined ? "null" : (lead.meets_baseline ? "Yes" : "No")}</dd>
+            <dt>Route team</dt><dd>{lead.route_team || "null"}</dd>
+            <dt>Advisor callback time</dt><dd>{lead.advisor_callback_time || "null"}</dd>
+            <dt>Requested callback time</dt><dd>{lead.reschedule_time || "null"}</dd>
             <dt>Retry count</dt><dd>{lead.retry_count}</dd>
             <dt>Synced to CRM</dt><dd>{lead.crm_synced ? "Yes" : "Not yet"}</dd>
             {lead.reviewed_at && (

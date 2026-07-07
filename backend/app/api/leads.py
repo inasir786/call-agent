@@ -59,8 +59,8 @@ def review_lead(lead_id: int, payload: ReviewDecision, db: Session = Depends(get
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-    if payload.decision not in ("qualified", "not_interested"):
-        raise HTTPException(status_code=400, detail="decision must be 'qualified' or 'not_interested'")
+    if payload.decision not in ("reactivated", "nurture", "closed_lost"):
+        raise HTTPException(status_code=400, detail="decision must be 'reactivated', 'nurture', or 'closed_lost'")
     lead.status = LeadStatus(payload.decision)
     lead.review_reason = None
     lead.reviewed_at = datetime.utcnow()

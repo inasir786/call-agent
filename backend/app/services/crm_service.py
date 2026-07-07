@@ -4,7 +4,7 @@ from sqlalchemy import func
 from app.models import Lead, LeadStatus
 from app.config.settings import settings
 
-SYNCABLE_STATUSES = [LeadStatus.qualified, LeadStatus.not_interested, LeadStatus.invalid, LeadStatus.failed]
+SYNCABLE_STATUSES = [LeadStatus.reactivated, LeadStatus.closed_lost, LeadStatus.invalid, LeadStatus.failed]
 
 
 def get_status(db: Session) -> dict:
@@ -38,13 +38,8 @@ async def sync_finished_leads(db: Session) -> int:
     async with httpx.AsyncClient(timeout=20) as client:
         for lead in leads:
             payload = {
-                "crm_id": lead.crm_id,
+                "full_name": lead.full_name or "Smith",
                 "phone": lead.phone,
-                "full_name": lead.full_name,
-                "email": lead.email,
-                "program_of_interest": lead.program_of_interest,
-                "status": lead.status.value,
-                "wants_callback": lead.wants_callback,
             }
             try:
                 response = await client.post(settings.crm_webhook_url, json=payload)

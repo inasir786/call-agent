@@ -68,7 +68,7 @@ Open http://localhost:5173 and log in with the ADMIN_USERNAME / ADMIN_PASSWORD f
 
 The assistant configuration — system prompt, voice, transcriber, and structured data schema — lives in code at `backend/app/services/assistant_prompt.py` and is sent to Vapi as a transient inline `assistant` object with every call, instead of referencing an assistant created in the dashboard. Edit that file to change the script or voice.
 
-1. Create an account at vapi.ai and get your private API key → `VAPI_API_KEY`.
+1. Create an account at vapi.ai and get your private API key → `VAPI_API_KEY`, and your public key → `VAPI_PUBLIC_KEY` (both are on the same API Keys page in the dashboard).
 2. Add a phone number in Vapi (for Pakistan, connect a local SIP trunk via BYO SIP) → `VAPI_PHONE_NUMBER_ID`.
 3. Set the webhook Server URL so Vapi can send call results back to your backend. Either:
    - Set it on the phone number in the Vapi dashboard, or
@@ -79,7 +79,11 @@ The assistant configuration — system prompt, voice, transcriber, and structure
    For local testing, expose your backend with ngrok: `ngrok http 8000` and use the ngrok URL.
    Set a secret in Vapi and put the same value in `VAPI_WEBHOOK_SECRET`.
 
-## 4. Running a campaign
+## 4. Testing without a phone number
+
+The admin panel's **Test call** page lets you talk to the assistant straight from your browser via WebRTC (Vapi's Web SDK), using the exact same config `build_assistant()` sends for real calls — no phone number required. Set `VAPI_PUBLIC_KEY` in `.env`, log in, and open Test call.
+
+## 5. Running a campaign
 
 1. Log in to the admin panel.
 2. Leads page → Import CSV. The file needs a `phone` column; optional columns: `name`, `email`, `program`, `crm_id`. Numbers are normalized to +92 format, duplicates and invalid numbers are skipped automatically.
@@ -87,7 +91,7 @@ The assistant configuration — system prompt, voice, transcriber, and structure
 4. The background dialer calls pending leads only within calling hours, retries no-answers, and updates each lead when Vapi reports the call result.
 5. Dashboard shows live progress. Leads page → Export qualified leads downloads the final CSV for the admissions team.
 
-## 5. CRM sync
+## 6. CRM sync
 
 Set `CRM_WEBHOOK_URL` in `.env` to an endpoint that accepts lead updates as JSON. Finished leads are pushed there automatically and marked as synced. Leave it empty to skip syncing and rely on the CSV export instead.
 

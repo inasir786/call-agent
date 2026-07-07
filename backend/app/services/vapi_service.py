@@ -5,9 +5,9 @@ from app.services.assistant_prompt import build_assistant
 VAPI_BASE_URL = "https://api.vapi.ai"
 
 
-async def start_call(phone: str, lead_id: int) -> dict:
+async def start_call(phone: str, lead_id: int, full_name: str | None = None) -> dict:
     payload = {
-        "assistant": build_assistant(),
+        "assistant": build_assistant(full_name),
         "phoneNumberId": settings.vapi_phone_number_id,
         "customer": {"number": phone},
         "metadata": {"lead_id": lead_id},

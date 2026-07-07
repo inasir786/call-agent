@@ -41,7 +41,7 @@ async def _tick():
         )
         for lead in leads:
             try:
-                result = await vapi_service.start_call(lead.phone, lead.id)
+                result = await vapi_service.start_call(lead.phone, lead.id, lead.full_name)
                 lead.status = LeadStatus.calling
                 db.commit()
                 logger.info(

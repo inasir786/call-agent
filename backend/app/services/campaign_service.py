@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.models import Lead, LeadStatus, Campaign
 from app.config.settings import settings
+from app.services.lead_service import TEST_LEAD_PHONE
 
 
 def get_campaign(db: Session) -> Campaign:
@@ -79,10 +80,12 @@ def pick_next_leads(db: Session, limit: int) -> list[Lead]:
     return (
         db.query(Lead)
         .filter(
+            Lead.dnc.is_(False),
+            Lead.phone != TEST_LEAD_PHONE,  # the reusable "Smith" fixture for the Test Call page, never a real lead
             or_(
                 Lead.status == LeadStatus.pending,
                 (Lead.status == LeadStatus.no_answer) & (Lead.next_retry_at <= now),
-            )
+            ),
         )
         .order_by(Lead.id)
         .limit(limit)
