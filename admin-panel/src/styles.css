@@ -121,10 +121,11 @@ h2 { font-family: var(--display); font-size: 15px; font-weight: 600; margin-bott
 }
 .stat-value { font-family: var(--display); font-size: 30px; font-weight: 700; }
 .stat-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
-.stat-qualified .stat-value { color: var(--pine); }
-.stat-not_interested .stat-value,
+.stat-reactivated .stat-value { color: var(--pine); }
+.stat-closed_lost .stat-value,
 .stat-failed .stat-value { color: var(--red); }
-.stat-calling .stat-value { color: var(--amber); }
+.stat-calling .stat-value,
+.stat-nurture .stat-value { color: var(--amber); }
 
 .filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .filters input { flex: 1; min-width: 220px; }
@@ -176,8 +177,9 @@ label {
 .badge-pending { background: #edf0ec; color: var(--muted); }
 .badge-calling { background: #fbf0dc; color: var(--amber); }
 .badge-no_answer { background: #f0ede4; color: #8a7a4f; }
-.badge-qualified { background: #e3f2e8; color: var(--pine); }
-.badge-not_interested { background: #f7e6e2; color: var(--red); }
+.badge-reactivated { background: #e3f2e8; color: var(--pine); }
+.badge-nurture { background: #fbf0dc; color: var(--amber); }
+.badge-closed_lost { background: #f7e6e2; color: var(--red); }
 .badge-invalid, .badge-failed { background: #ece9e9; color: #7a6a68; }
 .badge-needs_review { background: #fde3cf; color: #9a4d0f; }
 
@@ -232,6 +234,17 @@ dd { font-weight: 500; }
 details summary { cursor: pointer; color: var(--pine); font-weight: 500; font-size: 14px; }
 
 .warning-glyph { color: #9a4d0f; cursor: help; }
+
+.transcript-line {
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+  line-height: 1.5;
+}
+.transcript-line:first-of-type { border-top: none; padding-top: 0; }
+.transcript-line .role { font-weight: 600; margin-right: 4px; }
+.transcript-line.role-assistant .role { color: var(--pine); }
+.transcript-line.role-user .role { color: var(--amber); }
+.transcript-line.live { opacity: 0.6; font-style: italic; }
 
 .back { color: var(--muted); text-decoration: none; font-size: 14px; display: inline-block; margin-bottom: 12px; }
 .back:hover { color: var(--pine); }

@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 720
 
     vapi_api_key: str = ""
+    vapi_public_key: str = ""
     vapi_phone_number_id: str = ""
     vapi_webhook_secret: str = ""
     vapi_server_url: str = ""
@@ -23,6 +24,9 @@ class Settings(BaseSettings):
     retry_gap_hours: int = 3
     timezone: str = "Asia/Karachi"
     qa_sample_rate: float = 0.05
+    eligibility_baseline_description: str = (
+        "a CGPA of 2.0 out of 4.0, 50% marks, or an equivalent pass grade or higher"
+    )
 
     class Config:
         env_file = ".env"

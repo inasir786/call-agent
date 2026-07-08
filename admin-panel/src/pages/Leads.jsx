@@ -3,7 +3,7 @@ import { Link } from "react-router-dom"
 import { api, getToken } from "../api/client"
 import StatusBadge from "../components/StatusBadge"
 
-const STATUSES = ["", "pending", "calling", "no_answer", "qualified", "not_interested", "needs_review", "failed", "invalid"]
+const STATUSES = ["", "pending", "calling", "no_answer", "reactivated", "nurture", "closed_lost", "needs_review", "failed", "invalid"]
 
 export default function Leads() {
   const [data, setData] = useState({ total: 0, items: [] })
@@ -55,7 +55,7 @@ export default function Leads() {
   }
 
   const resetAll = async () => {
-    if (!window.confirm("Reset ALL leads (including qualified and not-interested) back to pending? This clears their call outcome and queues them all for re-calling.")) {
+    if (!window.confirm("Reset ALL leads back to pending — including reactivated, closed-lost, and do-not-call leads? This clears their call outcome (and any DNC lock) and queues them all for re-calling.")) {
       return
     }
     setResetting(true)
@@ -123,8 +123,8 @@ export default function Leads() {
       <div className="page-head">
         <h1>Leads</h1>
         <div className="actions">
-          <input type="file" accept=".csv" ref={fileRef} onChange={importCsv} hidden />
-          <button className="btn" onClick={() => fileRef.current.click()}>Import CSV</button>
+          <input type="file" accept=".csv,.xlsx,.xls" ref={fileRef} onChange={importCsv} hidden />
+          <button className="btn" onClick={() => fileRef.current.click()}>Import CSV/Excel</button>
           <button className="btn" onClick={syncCrm} disabled={syncing || !crmStatus?.configured}>
             {syncing ? "Syncing..." : "Sync CRM"}
           </button>
@@ -132,7 +132,7 @@ export default function Leads() {
             {resetting ? "Resetting..." : "Reset all to pending"}
           </button>
           <button className="btn" onClick={() => exportCsv("/api/export/all", "all_leads.csv")}>Export all leads</button>
-          <button className="btn primary" onClick={() => exportCsv("/api/export/qualified", "qualified_leads.csv")}>Export qualified leads</button>
+          <button className="btn primary" onClick={() => exportCsv("/api/export/qualified", "reactivated_leads.csv")}>Export reactivated leads</button>
         </div>
       </div>
       {crmStatus && (
@@ -162,10 +162,10 @@ export default function Leads() {
           <tr>
             <th>Name</th>
             <th>Phone</th>
-            <th>Email</th>
-            <th>Program</th>
+            <th>Current status</th>
+            <th>Timeline</th>
             <th>Status</th>
-            <th>Callback</th>
+            <th>Advisor callback</th>
             <th></th>
           </tr>
         </thead>
@@ -174,10 +174,10 @@ export default function Leads() {
             <tr key={lead.id}>
               <td>{lead.full_name || <span className="muted">Unknown</span>}</td>
               <td>{lead.phone}</td>
-              <td>{lead.email || <span className="muted">—</span>}</td>
-              <td>{lead.program_of_interest || <span className="muted">—</span>}</td>
+              <td>{lead.current_status || <span className="muted">—</span>}</td>
+              <td>{lead.timeline || <span className="muted">—</span>}</td>
               <td><StatusBadge status={lead.status} /></td>
-              <td>{lead.wants_callback ? "Yes" : "—"}</td>
+              <td>{lead.advisor_callback_time || <span className="muted">—</span>}</td>
               <td>
                 <Link to={`/leads/${lead.id}`}>View</Link>
                 {" · "}

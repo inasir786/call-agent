@@ -14,27 +14,27 @@ router = APIRouter(prefix="/api/export", tags=["export"], dependencies=[Depends(
 def export_qualified(db: Session = Depends(get_db)):
     leads = (
         db.query(Lead)
-        .filter(Lead.status == LeadStatus.qualified)
+        .filter(Lead.status == LeadStatus.reactivated)
         .order_by(Lead.updated_at.desc())
         .all()
     )
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["Full Name", "Phone", "Email", "Program of Interest", "Wants Callback", "Updated At"])
+    writer.writerow(["Full Name", "Phone", "Email", "Route Team", "Advisor Callback Time", "Updated At"])
     for lead in leads:
         writer.writerow([
             lead.full_name or "",
             lead.phone,
             lead.email or "",
-            lead.program_of_interest or "",
-            "Yes" if lead.wants_callback else "No",
+            lead.route_team or "",
+            lead.advisor_callback_time or "",
             lead.updated_at.strftime("%Y-%m-%d %H:%M"),
         ])
     buffer.seek(0)
     return StreamingResponse(
         iter([buffer.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=qualified_leads.csv"},
+        headers={"Content-Disposition": "attachment; filename=reactivated_leads.csv"},
     )
 
 
@@ -43,15 +43,15 @@ def export_all(db: Session = Depends(get_db)):
     leads = db.query(Lead).order_by(Lead.updated_at.desc()).all()
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["Full Name", "Phone", "Email", "Program of Interest", "Status", "Wants Callback", "Updated At"])
+    writer.writerow(["Full Name", "Phone", "Email", "Status", "Route Team", "Advisor Callback Time", "Updated At"])
     for lead in leads:
         writer.writerow([
             lead.full_name or "",
             lead.phone,
             lead.email or "",
-            lead.program_of_interest or "",
             lead.status.value,
-            "Yes" if lead.wants_callback else "No",
+            lead.route_team or "",
+            lead.advisor_callback_time or "",
             lead.updated_at.strftime("%Y-%m-%d %H:%M"),
         ])
     buffer.seek(0)

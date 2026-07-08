@@ -15,6 +15,7 @@ export default function Layout({ onLogout }) {
           <NavLink to="/" end>Dashboard</NavLink>
           <NavLink to="/leads">Leads</NavLink>
           <NavLink to="/campaign">Campaign</NavLink>
+          <NavLink to="/test-call">Test call</NavLink>
         </nav>
         <button className="btn ghost logout" onClick={onLogout}>Log out</button>
       </aside>

@@ -6,8 +6,10 @@ const CARDS = [
   ["pending", "Not called yet"],
   ["calling", "Calling now"],
   ["no_answer", "No answer (will retry)"],
-  ["qualified", "Qualified"],
-  ["not_interested", "Not interested"],
+  ["reactivated", "Reactivated"],
+  ["nurture", "Nurture"],
+  ["closed_lost", "Closed-lost"],
+  ["needs_review", "Needs review"],
   ["failed", "Unreachable"],
   ["invalid", "Invalid numbers"],
 ]

@@ -36,6 +36,16 @@ class LeadOut(BaseModel):
     email: Optional[str] = None
     program_of_interest: Optional[str] = None
     wants_callback: bool
+    reschedule_time: Optional[str] = None
+    current_status: Optional[str] = None
+    timeline: Optional[str] = None
+    original_blocker: Optional[str] = None
+    last_qualification: Optional[str] = None
+    grade_or_cgpa: Optional[str] = None
+    meets_baseline: Optional[bool] = None
+    advisor_callback_time: Optional[str] = None
+    route_team: Optional[str] = None
+    dnc: bool
     status: str
     retry_count: int
     crm_synced: bool
@@ -116,10 +126,12 @@ class StatsOut(BaseModel):
     pending: int
     calling: int
     no_answer: int
-    qualified: int
-    not_interested: int
+    reactivated: int
+    nurture: int
+    closed_lost: int
     invalid: int
     failed: int
+    needs_review: int
     total_calls_made: int
     is_running: bool
     by_program: List[ProgramCount] = []

@@ -26,6 +26,10 @@ async def _tick():
         if not campaign.is_running:
             logger.debug("Tick skipped: campaign is not running")
             return
+        if not campaign_service.has_leads_remaining(db):
+            campaign_service.set_running(db, False)
+            logger.info("Campaign auto-stopped: no pending, in-flight, or retry-due leads remain")
+            return
         if not campaign_service.within_calling_hours(campaign):
             logger.debug("Tick skipped: outside calling hours")
             return
@@ -41,7 +45,7 @@ async def _tick():
         )
         for lead in leads:
             try:
-                result = await vapi_service.start_call(lead.phone, lead.id)
+                result = await vapi_service.start_call(lead.phone, lead.id, lead.full_name)
                 lead.status = LeadStatus.calling
                 db.commit()
                 logger.info(

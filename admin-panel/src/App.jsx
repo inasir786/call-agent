@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard"
 import Leads from "./pages/Leads"
 import LeadDetail from "./pages/LeadDetail"
 import Campaign from "./pages/Campaign"
+import TestCall from "./pages/TestCall"
 import Layout from "./components/Layout"
 import { getToken, setToken, clearToken } from "./api/client"
 
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/leads" element={<Leads />} />
           <Route path="/leads/:id" element={<LeadDetail />} />
           <Route path="/campaign" element={<Campaign />} />
+          <Route path="/test-call" element={<TestCall />} />
         </Route>
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

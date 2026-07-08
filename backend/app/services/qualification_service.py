@@ -4,8 +4,6 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from app.models import Lead, LeadStatus, Call
 from app.config.settings import settings
-from app.utils.phone import is_valid_email
-from app.utils.grounding import is_grounded
 
 logger = logging.getLogger("qualification")
 
@@ -19,10 +17,30 @@ NO_ANSWER_REASONS = {
 INVALID_REASONS = {"invalid-phone-number", "call-forwarding-not-supported"}
 
 
+def _extract_structured_output(artifact: dict) -> dict:
+    """artifact.structuredOutputs is keyed by structured-output ID (we only ever
+    create one, via structured_output_service.py), and Vapi's exact nesting of the
+    extracted fields under that key isn't documented — handle both "value is the
+    flat data dict directly" and "value wraps it under a result/output/data key"."""
+    outputs = artifact.get("structuredOutputs") or {}
+    if not outputs:
+        return {}
+    value = next(iter(outputs.values()), {}) or {}
+    for nested_key in ("result", "output", "data"):
+        if isinstance(value.get(nested_key), dict):
+            return value[nested_key]
+    return value
+
+
 def process_call_result(db: Session, message: dict) -> None:
     call_data = message.get("call", {}) or {}
     vapi_call_id = call_data.get("id")
-    metadata = call_data.get("metadata", {}) or {}
+    # Real phone calls (vapi_service.start_call) put metadata directly on the call via
+    # Vapi's REST API, landing at call.metadata. Browser web calls (TestCall.jsx) pass
+    # it via assistantOverrides.metadata instead, since the web SDK's start() has no
+    # call-level metadata parameter — Vapi stores that under call.assistantOverrides.metadata
+    # rather than call.metadata. Check both so either call path can be linked to a lead.
+    metadata = call_data.get("metadata") or (call_data.get("assistantOverrides") or {}).get("metadata") or {}
     lead_id = metadata.get("lead_id")
     if not lead_id:
         return
@@ -36,9 +54,18 @@ def process_call_result(db: Session, message: dict) -> None:
         db.add(call)
 
     ended_reason = message.get("endedReason") or call_data.get("endedReason") or ""
-    analysis = message.get("analysis", {}) or {}
-    structured = analysis.get("structuredData") or {}
     artifact = message.get("artifact", {}) or {}
+    structured = _extract_structured_output(artifact)
+
+    if not structured:
+        logger.warning(
+            "No structuredOutputs in artifact for lead_id=%d (vapi_call_id=%s) — "
+            "raw artifact.structuredOutputs=%r. Falling back to no-answer handling.",
+            lead.id, vapi_call_id, artifact.get("structuredOutputs"),
+        )
+    else:
+        found = {k: v for k, v in structured.items() if v not in (None, "", False)}
+        logger.info("structuredOutputs found for lead_id=%d: %s", lead.id, found)
 
     call.status = "ended"
     call.ended_reason = ended_reason
@@ -48,6 +75,27 @@ def process_call_result(db: Session, message: dict) -> None:
     call.transcript = artifact.get("transcript") or message.get("transcript")
     call.extracted_data = structured
     call.cost = message.get("cost")
+
+    logger.info(
+        "Full transcript for lead_id=%d (vapi_call_id=%s):\n%s",
+        lead.id, vapi_call_id, call.transcript or "(empty)",
+    )
+
+    # Extraction models can produce plausible-sounding structuredData even from a
+    # near-empty transcript (observed: a call where the caller never said a word
+    # still came back with detailed answers for every question). A transcript with
+    # no "User:" turn at all means the caller never actually spoke, so nothing in
+    # structured can be genuinely grounded — treat it as incomplete regardless of
+    # what was extracted, rather than trusting fabricated-looking data.
+    has_caller_speech = "User:" in (call.transcript or "")
+    if structured and not has_caller_speech:
+        logger.warning(
+            "structuredOutputs present for lead_id=%d but transcript has no caller "
+            "speech (likely fabricated, not grounded) — treating as no-answer. "
+            "structured=%s transcript=%r",
+            lead.id, structured, call.transcript,
+        )
+        structured = {}
 
     if ended_reason in INVALID_REASONS:
         lead.status = LeadStatus.invalid
@@ -76,68 +124,78 @@ def _handle_no_answer(lead: Lead) -> None:
 
 
 def _apply_extracted_data(lead: Lead, data: dict, transcript: str) -> None:
-    name = data.get("full_name") or data.get("name")
-    email = data.get("email")
-    program = data.get("program_of_interest") or data.get("program")
-    interested = _to_bool(data.get("interested"))
-    wants_callback = _to_bool(data.get("wants_callback"))
+    # Always persist whatever was captured, regardless of which branch the call took.
+    lead.current_status = data.get("current_status")
+    lead.timeline = data.get("timeline")
+    lead.original_blocker = data.get("original_blocker")
+    lead.last_qualification = data.get("last_qualification")
+    lead.grade_or_cgpa = data.get("grade_or_cgpa")
+    lead.meets_baseline = _to_bool(data.get("meets_baseline"))
+    lead.advisor_callback_time = data.get("advisor_callback_time")
 
-    confidence = {}
-    ungrounded_fields = []
-    missing_fields = []
+    if _to_bool(data.get("hostile_or_dnc")):
+        lead.dnc = True
+        lead.status = LeadStatus.closed_lost
+        lead.review_reason = "hostile/dnc_requested"
+        return
 
-    if name:
-        lead.full_name = str(name).strip().title()
-        grounded = is_grounded(str(name), transcript, field="full_name")
-        confidence["full_name"] = {"grounded": grounded}
-        if not grounded:
-            ungrounded_fields.append("full_name")
-    else:
-        missing_fields.append("full_name")
+    if _to_bool(data.get("wrong_number")):
+        lead.status = LeadStatus.invalid
+        lead.review_reason = "wrong_number"
+        return
 
-    if email and is_valid_email(str(email)):
-        lead.email = str(email).strip().lower()
-        grounded = is_grounded(str(email), transcript, field="email")
-        confidence["email"] = {"grounded": grounded}
-        if not grounded:
-            ungrounded_fields.append("email")
-    else:
-        missing_fields.append("email")
+    if _to_bool(data.get("reschedule_requested")):
+        reschedule_time = data.get("reschedule_time")
+        lead.reschedule_time = str(reschedule_time).strip() if reschedule_time else None
+        lead.review_reason = None
+        _handle_no_answer(lead)
+        return
 
-    if program:
-        lead.program_of_interest = str(program).strip()
-        grounded = is_grounded(str(program), transcript, field="program_of_interest")
-        confidence["program_of_interest"] = {"grounded": grounded}
-        if not grounded:
-            ungrounded_fields.append("program_of_interest")
-    else:
-        missing_fields.append("program_of_interest")
+    timeline = lead.timeline
+    enrolled_late = (
+        lead.current_status == "enrolled_elsewhere"
+        and data.get("enrolled_semester_stage") == "later"
+    )
 
-    lead.wants_callback = wants_callback
-    lead.field_confidence = confidence
+    if timeline == "probably_never" or enrolled_late:
+        lead.status = LeadStatus.closed_lost
+        lead.review_reason = (
+            data.get("probably_never_reason") or "enrolled_elsewhere"
+        )
+        return
 
-    if not (interested or wants_callback):
-        lead.status = LeadStatus.not_interested
+    if timeline == "next_year_or_unsure":
+        lead.status = LeadStatus.nurture
+        lead.review_reason = lead.original_blocker
+        return
+
+    if timeline == "fall_intake":
+        if not lead.meets_baseline:
+            lead.status = LeadStatus.needs_review
+            lead.review_reason = "below_eligibility_baseline"
+            return
+
+        if not lead.advisor_callback_time:
+            lead.status = LeadStatus.needs_review
+            lead.review_reason = "missing: advisor_callback_time"
+            return
+
+        lead.route_team = (
+            "masters_hybrid" if lead.current_status == "working" else "bachelor"
+        )
+
+        if random.random() < settings.qa_sample_rate:
+            lead.status = LeadStatus.needs_review
+            lead.review_reason = "random_qa_sample"
+            return
+
+        lead.status = LeadStatus.reactivated
         lead.review_reason = None
         return
 
-    if missing_fields or ungrounded_fields:
-        reasons = []
-        if missing_fields:
-            reasons.append(f"missing: {', '.join(missing_fields)}")
-        if ungrounded_fields:
-            reasons.append(f"ungrounded: {', '.join(ungrounded_fields)}")
-        lead.status = LeadStatus.needs_review
-        lead.review_reason = "; ".join(reasons)
-        return
-
-    if random.random() < settings.qa_sample_rate:
-        lead.status = LeadStatus.needs_review
-        lead.review_reason = "random_qa_sample"
-        return
-
-    lead.status = LeadStatus.qualified
-    lead.review_reason = None
+    # Call ended before any branch resolved (e.g. dropped mid-conversation).
+    lead.status = LeadStatus.needs_review
+    lead.review_reason = "incomplete_call"
 
 
 def _to_bool(value) -> bool:
