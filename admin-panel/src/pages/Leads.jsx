@@ -55,7 +55,7 @@ export default function Leads() {
   }
 
   const resetAll = async () => {
-    if (!window.confirm("Reset ALL leads (including reactivated and closed-lost, but not do-not-call leads) back to pending? This clears their call outcome and queues them all for re-calling.")) {
+    if (!window.confirm("Reset ALL leads back to pending — including reactivated, closed-lost, and do-not-call leads? This clears their call outcome (and any DNC lock) and queues them all for re-calling.")) {
       return
     }
     setResetting(true)
@@ -123,8 +123,8 @@ export default function Leads() {
       <div className="page-head">
         <h1>Leads</h1>
         <div className="actions">
-          <input type="file" accept=".csv" ref={fileRef} onChange={importCsv} hidden />
-          <button className="btn" onClick={() => fileRef.current.click()}>Import CSV</button>
+          <input type="file" accept=".csv,.xlsx,.xls" ref={fileRef} onChange={importCsv} hidden />
+          <button className="btn" onClick={() => fileRef.current.click()}>Import CSV/Excel</button>
           <button className="btn" onClick={syncCrm} disabled={syncing || !crmStatus?.configured}>
             {syncing ? "Syncing..." : "Sync CRM"}
           </button>

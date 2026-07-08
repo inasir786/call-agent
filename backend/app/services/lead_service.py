@@ -9,27 +9,67 @@ from app.utils.phone import normalize_pk_phone
 def _clean_value(v) -> str:
     if isinstance(v, list):
         v = " ".join(x for x in v if x)
-    return (v or "").strip()
+    if v is None:
+        return ""
+    # openpyxl hands back phone-number-like columns as floats (e.g. 923001234567.0)
+    # — stringify whole-number floats as plain integers or the trailing ".0" would
+    # get merged into the digits by normalize_pk_phone's non-digit stripping.
+    if isinstance(v, float) and v.is_integer():
+        return str(int(v))
+    return str(v).strip()
 
 
-def import_leads_csv(db: Session, file_bytes: bytes) -> dict:
+def _header_row_index(rows: list[list[str]]) -> int:
+    # Skip leading blank/junk rows (e.g. a stray ",," before the real header) so the
+    # first row with at least 2 named columns is used as the header, not row 1 blindly.
+    return next(
+        (i for i, r in enumerate(rows) if sum(1 for cell in r if cell.strip()) >= 2),
+        0,
+    )
+
+
+def _rows_from_csv(file_bytes: bytes):
     text = file_bytes.decode("utf-8-sig", errors="ignore")
     lines = text.splitlines()
     all_rows = list(csv.reader(lines))
-    # Skip leading blank/junk rows (e.g. a stray ",," before the real header) so the
-    # first row with at least 2 named columns is used as the header, not row 1 blindly.
-    header_idx = next(
-        (i for i, r in enumerate(all_rows) if sum(1 for cell in r if cell.strip()) >= 2),
-        0,
-    )
+    header_idx = _header_row_index(all_rows)
     reader = csv.DictReader(lines[header_idx:])
+    for row in reader:
+        yield {(k or "").strip().lower(): _clean_value(v) for k, v in row.items()}
+
+
+def _rows_from_excel(file_bytes: bytes):
+    from openpyxl import load_workbook
+
+    workbook = load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+    sheet = workbook.active
+    all_rows = [
+        [_clean_value(cell) for cell in row]
+        for row in sheet.iter_rows(values_only=True)
+    ]
+    header_idx = _header_row_index(all_rows)
+    if header_idx >= len(all_rows):
+        return
+    headers = [cell.strip().lower() for cell in all_rows[header_idx]]
+    for row in all_rows[header_idx + 1:]:
+        if not any(cell.strip() for cell in row):
+            continue
+        yield {
+            headers[i] if i < len(headers) and headers[i] else f"col_{i}": row[i]
+            for i in range(len(row))
+        }
+
+
+def import_leads_csv(db: Session, file_bytes: bytes, filename: str = "") -> dict:
+    is_excel = filename.lower().endswith((".xlsx", ".xls"))
+    rows = _rows_from_excel(file_bytes) if is_excel else _rows_from_csv(file_bytes)
+
     imported = 0
     duplicates = 0
     invalid = 0
     seen = set()
     existing = {p for (p,) in db.query(Lead.phone).all()}
-    for row in reader:
-        row = {(k or "").strip().lower(): _clean_value(v) for k, v in row.items()}
+    for row in rows:
         phone_key = next(
             (k for k in row if "phone" in k or "mobile" in k or "contact" in k or "number" in k),
             None,
@@ -93,14 +133,17 @@ def get_or_reset_test_lead(db: Session) -> Lead:
 
 
 def reset_all_leads(db: Session) -> int:
+    # No dnc filter — resetting is now an explicit admin action that also clears a
+    # mistaken DNC/hostile lock (e.g. a misclassified call), making every lead
+    # callable again, not just non-DNC ones.
     updated = (
         db.query(Lead)
-        .filter(Lead.dnc.is_(False))
         .update(
             {
                 Lead.status: LeadStatus.pending,
                 Lead.retry_count: 0,
                 Lead.next_retry_at: None,
+                Lead.dnc: False,
                 Lead.email: None,
                 Lead.program_of_interest: None,
                 Lead.wants_callback: False,

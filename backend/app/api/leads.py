@@ -12,10 +12,10 @@ router = APIRouter(prefix="/api/leads", tags=["leads"], dependencies=[Depends(re
 
 @router.post("/import", response_model=ImportResult)
 async def import_leads(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    if not file.filename.lower().endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Please upload a CSV file")
+    if not file.filename.lower().endswith((".csv", ".xlsx", ".xls")):
+        raise HTTPException(status_code=400, detail="Please upload a CSV or Excel (.xlsx/.xls) file")
     content = await file.read()
-    return lead_service.import_leads_csv(db, content)
+    return lead_service.import_leads_csv(db, content, file.filename)
 
 
 @router.post("/reset-all", response_model=ResetResult)

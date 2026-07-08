@@ -40,7 +40,7 @@ IMPORTANT: after giving whichever one of the three responses above applies, you 
 Q4 - ELIGIBILITY (reached either from Q2's Fall-timeline hot path, or after Q3):
 Ask: "What was your last qualification, and roughly what grade or CGPA did you get?"
 This counts as meeting baseline: {eligibility_baseline_description}.
-- If what they describe sounds like it meets that baseline: say it appears fine and that an advisor will confirm the details, then go to Q5.
+- If what they describe sounds like it meets that baseline: say it appears fine and that an advisor will confirm the details, including any GAT or HAT test results if they've taken them, then go to Q5.
 - If it sounds below that baseline: do NOT tell them anything negative or that they are rejected — simply thank them and say a closing line as if wrapping up normally. Do not continue to Q5.
 Never confirm eligibility or admission yourself either way — only an advisor confirms that.
 
@@ -55,16 +55,16 @@ Rules:
 - Never restart the call or repeat the opening greeting once the caller has already answered it. If at any point what the caller said doesn't make sense, seems unrelated, or you're not confident you understood it, do not guess, move on, or start over from the beginning — just say something like "Sorry, I didn't quite catch that" and re-ask the exact same question you were already on. Always stay on the current question until it is clearly answered.
 - If the caller starts talking or asks a question while you are still mid-sentence, stop talking immediately — do not finish your sentence first. Then handle whatever they said: if it's a question you can answer (see the next two rules), answer it right away, then resume exactly where you left off — re-ask whichever question in the flow was pending rather than skipping it or restarting the call.
 - If the caller asks a question at any point, first check whether it can be answered using information already given in this script (e.g. the scholarship/installment-plan mention, the ASU pathway differentiator, the Master's/hybrid mention). If so, briefly answer using only that information, then continue with whichever question in the flow you were on.
-- If the question is not covered by anything in this script (e.g. detailed fee amounts, visa, campus, or any other specifics you don't have a defined answer for here), do not guess or improvise — simply say: "For that, please call 0300-0000000 and our team will help you with the details." Then continue with whichever question in the flow you were on.
+- If the question is not covered by anything in this script (e.g. detailed fee amounts, visa, campus, admission dates/deadlines, or any other specifics you don't have a defined answer for here), do not guess or improvise — simply say: "I don't have that information — you can ask the NIT team, their number is 0300-0000000." Then continue with whichever question in the flow you were on.
 - Never make promises about fees, scholarships, or admission approval. Never confirm eligibility or admission yourself — always defer to "an advisor will confirm."
 - Only record information exactly as the caller said it — never guess, normalize, or invent a plausible-sounding answer.
 - Be warm, respectful, and brief at all times."""
 
-# Previous, longer greeting (kept here for reference / easy revert):
-# FIRST_MESSAGE_WITH_NAME = "Assalam-o-alaikum, {first_name}? This is Aisha, an AI assistant from NIT — the university powered by Arizona State University. You enquired about admission some time back. Do you have two minutes?"
-# FIRST_MESSAGE_GENERIC = "Assalam-o-alaikum! This is Aisha, an AI assistant from NIT — the university powered by Arizona State University. You enquired about admission some time back. Do you have two minutes?"
-FIRST_MESSAGE_WITH_NAME = "An AI assistant from NIT. Do you have two minutes?"
-FIRST_MESSAGE_GENERIC = "An AI assistant from NIT. Do you have two minutes?"
+# Full original greeting — safe to use in full now that we're on the cascading
+# pipeline (TTS reliably speaks the entire scripted line; the earlier clipping
+# issue was specific to the realtime model, not this pipeline).
+FIRST_MESSAGE_WITH_NAME = "Assalam-o-alaikum, {first_name}? This is Aisha, an AI assistant from NIT — the university powered by Arizona State University. You enquired about admission some time back. Do you have two minutes?"
+FIRST_MESSAGE_GENERIC = "Assalam-o-alaikum! This is Aisha, an AI assistant from NIT — the university powered by Arizona State University. You enquired about admission some time back. Do you have two minutes?"
 
 # Plain types only (no "type": ["string", "null"] unions) and no forced "required" /
 # "additionalProperties" — matching Vapi's own documented working structuredDataPlan
@@ -170,21 +170,54 @@ def build_assistant(full_name: str | None = None) -> dict:
     assistant = {
         "model": {
             "provider": "openai",
-            "model": "gpt-realtime-2025-08-28",
+            "model": "gpt-4o",
             "temperature": 0.3,
             "messages": [{"role": "system", "content": system_prompt}],
         },
         "voice": {
-            "provider": "openai",
-            "voiceId": "marin",
+            "provider": "11labs",
+            "voiceId": "21m00Tcm4TlvDq8ikWAM",
+            # eleven_multilingual_v2 (not an English-only turbo model) — handles
+            # accents/phrasing more robustly than a pure-English turbo model.
+            "model": "eleven_multilingual_v2",
+            # Vapi's optimizeStreamingLatency defaults to 3, which explicitly trades
+            # audio quality for ~200-400ms less latency — dropping it to 0 favors a
+            # stable, consistent voice over shaving off response time.
+            "optimizeStreamingLatency": 0,
+            "stability": 0.5,
+            "similarityBoost": 0.75,
+            "useSpeakerBoost": True,
         },
         "firstMessage": first_message,
-        # No transcriber block: realtime speech-to-speech models process audio
-        # natively, no separate ASR step. No stopSpeakingPlan either: Vapi's docs
-        # state turn-detection/interruption for realtime models is handled internally
-        # by their orchestration layer, not exposed as assistant config — known
-        # limitation from earlier testing this session (silence-timeouts, clipped
-        # sentences), reintroduced here at the user's explicit request.
+        "transcriber": {
+            "provider": "deepgram",
+            "model": "nova-2",
+            "language": "en",
+            "keywords": TRANSCRIBER_KEYWORDS,
+        },
+        # Lowered from Vapi's defaults (numWords 0 / voiceSeconds 0.2) so a short reply
+        # spoken right as the assistant finishes (e.g. "yes") is recognized as the
+        # user's turn immediately, instead of getting swallowed while the system is
+        # still in "assistant speaking" mode. This is the actual configurable turn-
+        # taking lever the realtime model doesn't expose at all.
+        "stopSpeakingPlan": {
+            "numWords": 0,
+            "voiceSeconds": 0.1,
+            "backoffSeconds": 0.5,
+        },
+        # Vapi's default onNoPunctuationSeconds (1.5s) is the biggest contributor to
+        # perceived response delay: if Deepgram doesn't confidently punctuate a short
+        # utterance (common for brief phrases), Vapi waits this long before even
+        # sending it to the model. Lowered here, balanced against onNumberSeconds
+        # (kept higher so multi-digit numbers like phone/CGPA aren't cut off mid-read).
+        "startSpeakingPlan": {
+            "waitSeconds": 0.4,
+            "transcriptionEndpointingPlan": {
+                "onPunctuationSeconds": 0.1,
+                "onNoPunctuationSeconds": 0.5,
+                "onNumberSeconds": 0.5,
+            },
+        },
         # analysisPlan.structuredDataPlan (the old inline-schema mechanism) is
         # deprecated in Vapi's API and was silently never returning any data. The
         # current mechanism is a separately-created StructuredOutput resource
