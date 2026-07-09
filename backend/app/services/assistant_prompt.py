@@ -148,7 +148,10 @@ ANALYSIS_INSTRUCTIONS = (
 
 # Deepgram nova-2 keyword boosting, format "term:intensifier". Keep this list short and
 # specific to real program codes/names so it doesn't bias transcription of unrelated speech.
-TRANSCRIBER_KEYWORDS = ["NIT:2"]
+# "Fall"/"Spring" are the single most decision-critical words in the whole script (Q2's
+# hot-path branch hinges on hearing "Fall" correctly) - a real call had it mis-transcribed
+# as "this 1", so boosting them is worth the small bias risk.
+TRANSCRIBER_KEYWORDS = ["NIT:2", "Fall:2", "Spring:2", "CGPA:2"]
 
 
 def build_assistant(full_name: str | None = None) -> dict:
@@ -191,7 +194,12 @@ def build_assistant(full_name: str | None = None) -> dict:
         "firstMessage": first_message,
         "transcriber": {
             "provider": "deepgram",
-            "model": "nova-2",
+            # nova-2-phonecall (not plain nova-2) - Deepgram's variant tuned for
+            # low-quality 8kHz telephony audio, unlike generic nova-2 which is tuned
+            # for higher-quality audio (meetings/web). Real phone calls were failing
+            # to transcribe the caller's answer at all, requiring them to repeat
+            # themselves 2-3 times before anything registered.
+            "model": "nova-2-phonecall",
             "language": "en",
             "keywords": TRANSCRIBER_KEYWORDS,
         },
@@ -205,16 +213,17 @@ def build_assistant(full_name: str | None = None) -> dict:
             "voiceSeconds": 0.1,
             "backoffSeconds": 0.5,
         },
-        # Vapi's default onNoPunctuationSeconds (1.5s) is the biggest contributor to
-        # perceived response delay: if Deepgram doesn't confidently punctuate a short
-        # utterance (common for brief phrases), Vapi waits this long before even
-        # sending it to the model. Lowered here, balanced against onNumberSeconds
-        # (kept higher so multi-digit numbers like phone/CGPA aren't cut off mid-read).
+        # Vapi's default onNoPunctuationSeconds (1.5s) trades accuracy for latency. It
+        # was previously lowered to 0.5s, but real calls showed this cutting callers off
+        # mid-sentence during a brief thinking pause (e.g. "I will start this... fall"
+        # got truncated and mis-transcribed as "this 1") - raised back up partway
+        # (0.5 -> 0.8) to give multi-word answers room to finish, still well under
+        # Vapi's 1.5s default.
         "startSpeakingPlan": {
             "waitSeconds": 0.4,
             "transcriptionEndpointingPlan": {
                 "onPunctuationSeconds": 0.1,
-                "onNoPunctuationSeconds": 0.5,
+                "onNoPunctuationSeconds": 0.8,
                 "onNumberSeconds": 0.5,
             },
         },
