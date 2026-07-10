@@ -23,7 +23,6 @@ export default function TestCall() {
   const [lines, setLines] = useState([])
   const [live, setLive] = useState(null)
   const [error, setError] = useState("")
-  const [micLevel, setMicLevel] = useState(0)
   const [micSpeaking, setMicSpeaking] = useState(false)
   const [eventLog, setEventLog] = useState([])
   const [micTestLevel, setMicTestLevel] = useState(0)
@@ -141,7 +140,6 @@ export default function TestCall() {
     setError("")
     setLines([])
     setLive(null)
-    setMicLevel(0)
     setMicSpeaking(false)
     setEventLog([])
     setTestLeadId(null)
@@ -174,19 +172,15 @@ export default function TestCall() {
         setStatus("idle")
         logEvent(`error: ${detail}`)
       })
-      // volume-level/speech-start/speech-end reflect raw mic input, independent of
-      // whether Deepgram manages to turn it into text — use them to tell "mic never
-      // reached Vapi" apart from "audio arrived but wasn't transcribed".
-      vapi.on("volume-level", (level) => setMicLevel(level))
-      vapi.on("speech-start", () => {
-        setMicSpeaking(true)
-        logEvent("speech-start (voice detected)")
-      })
-      vapi.on("speech-end", () => {
-        setMicSpeaking(false)
-        logEvent("speech-end")
-      })
       vapi.on("message", (message) => {
+        if (message.type === "speech-update" && message.role === "user") {
+          // Confirmed via real testing: Vapi's "volume-level" event does NOT track
+          // mic input (it reacted to the assistant's own voice instead) - this
+          // role-scoped speech-update is the only signal actually proven to reflect
+          // the caller's mic reaching Vapi, independent of whether Deepgram manages
+          // to turn it into text.
+          setMicSpeaking(message.status === "started")
+        }
         if (message.type !== "transcript") {
           logEvent(`message: ${message.type}${message.role ? " (" + message.role + ")" : ""}`)
           return
@@ -291,16 +285,14 @@ export default function TestCall() {
       </div>
       {(status === "active" || status === "connecting") && (
         <div className="card narrow" style={{ marginTop: 20 }}>
-          <h2>Mic input {micSpeaking ? "— voice detected" : ""}</h2>
+          <h2>Your mic reaching Vapi</h2>
           <p className="muted" style={{ marginBottom: 8 }}>
-            This bar reflects raw microphone audio reaching Vapi, before any transcription.
-            If it never moves while you talk, it's a mic/permission issue, not a transcription one.
+            Lights up only while Vapi detects you speaking. If it never lights up while you
+            talk, it's a mic/permission issue. If it lights up but no transcript ever
+            appears below, your audio is arriving but not being transcribed.
           </p>
-          <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{ width: `${Math.min(100, Math.round(micLevel * 100))}%`, transition: "width 80ms linear" }}
-            />
+          <div className={`pill ${micSpeaking ? "pill-live" : "pill-off"}`}>
+            {micSpeaking ? "Voice detected" : "Silent"}
           </div>
         </div>
       )}
