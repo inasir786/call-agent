@@ -124,17 +124,13 @@ def _handle_no_answer(lead: Lead) -> None:
 
 
 def _apply_extracted_data(lead: Lead, data: dict, transcript: str) -> None:
-    # Always persist whatever was captured, regardless of which branch the call took.
-    lead.current_status = data.get("current_status")
-    lead.timeline = data.get("timeline")
-    lead.original_blocker = data.get("original_blocker")
-    lead.last_qualification = data.get("last_qualification")
-    lead.grade_or_cgpa = data.get("grade_or_cgpa")
-    lead.meets_baseline = _to_bool(data.get("meets_baseline"))
-    lead.advisor_callback_time = data.get("advisor_callback_time")
-    if data.get("advisor_callback_email"):
-        lead.email = data.get("advisor_callback_email")
-
+    # These three outcomes only ever happen in the OPENING, before Q1 is ever asked -
+    # check and return early BEFORE touching any Q1-Q5 field below. Extraction models
+    # can fabricate plausible-sounding answers to questions that were never actually
+    # asked (observed live: a call that never got past "I'm busy" still came back with
+    # detailed current_status/timeline/original_blocker/enrolled_semester_stage) - the
+    # only reliable defense is never persisting those fields when the call structurally
+    # couldn't have reached them, regardless of what the extraction claims.
     if _to_bool(data.get("hostile_or_dnc")):
         lead.dnc = True
         lead.status = LeadStatus.closed_lost
@@ -152,6 +148,17 @@ def _apply_extracted_data(lead: Lead, data: dict, transcript: str) -> None:
         lead.review_reason = None
         _handle_no_answer(lead)
         return
+
+    # Only reached if the call actually got past the opening.
+    lead.current_status = data.get("current_status")
+    lead.timeline = data.get("timeline")
+    lead.original_blocker = data.get("original_blocker")
+    lead.last_qualification = data.get("last_qualification")
+    lead.grade_or_cgpa = data.get("grade_or_cgpa")
+    lead.meets_baseline = _to_bool(data.get("meets_baseline"))
+    lead.advisor_callback_time = data.get("advisor_callback_time")
+    if data.get("advisor_callback_email"):
+        lead.email = data.get("advisor_callback_email")
 
     timeline = lead.timeline
     enrolled_late = (

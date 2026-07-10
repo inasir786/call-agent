@@ -71,6 +71,7 @@ export default function LeadDetail() {
           <dl>
             <dt>Full name</dt><dd>{lead.full_name || "null"}</dd>
             <dt>Phone</dt><dd>{lead.phone}</dd>
+            <dt>Email</dt><dd>{lead.email || "null"}</dd>
             <dt>Reason</dt><dd>{lead.review_reason || "null"}</dd>
             <dt>Do not call</dt><dd>{lead.dnc ? "Yes" : "No"}</dd>
             <dt>Current status</dt><dd>{lead.current_status || "null"}</dd>
