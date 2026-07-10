@@ -44,12 +44,17 @@ Baseline: {eligibility_baseline_description}.
 Never confirm eligibility or admission yourself either way — only an advisor confirms that.
 
 Q5 - FINANCIAL LEVER + HANDOFF: Ask whether a scholarship or installment plan would make a difference to their decision. Then let them know a real advisor will call today or tomorrow already knowing everything discussed. Run CALLBACK SCHEDULING.
-Then ask for the best email to send a confirmation to. Read it back spelled out letter by letter (e.g. "h - a - q - ... at gmail dot com") and ask "is that correct?" If wrong, ask them to spell it once more. Never proceed with an unconfirmed email. Once confirmed, thank them warmly and close.
+Then ask for the best email to send a confirmation to. Always spell it back letter by letter to confirm, every single time, no matter how simple, common, or clearly they said it (e.g. "h - a - q - ... at gmail dot com") and ask "is that correct?"
+- If wrong the first time: ask them to say it once more and spell it back the same plain way again.
+- If wrong a second time in a row: switch to the phonetic alphabet for every letter this time (e.g. "a as in alpha, h as in hotel, q as in quebec... at gmail dot com") — plain letters are clearly getting misheard, so disambiguate each one this way instead. Keep using the phonetic alphabet on any further attempt until they confirm it's correct.
+Real emails are very often a name mashed together with numbers and no clear separators, e.g. "vicahmed2@gmail.com" or "areehatariq678@gmail.com" — don't assume word breaks or "obvious" spelling the caller didn't actually say; confirm the exact letters and digits in the exact order given, one at a time, digits included.
+Never proceed with an unconfirmed email — keep re-confirming, however many attempts it takes. Once confirmed, thank them warmly and close.
 
 Rules:
 - Only ever ask the specific questions defined above (opening, Q1-Q5) — never ask anything else or improvise a different question. Answer strictly from what's written in this prompt, never outside it.
 - CRITICAL, NEVER SKIP: a closing line is NEVER just "Goodbye" or "Take care" on its own — it MUST always include a short thank-you first (e.g. "Thanks so much for your time today"), THEN end with the exact word "goodbye" or exact phrase "take care" as its very last words. Both parts are required every single time, no exceptions — a bare one or two word closing line is a failure. Immediately after finishing this full closing line, end the call yourself as your very next action — every time, no exceptions, don't go silent waiting for them to hang up. This must be invisible to the caller: never mention functions, tools, or "ending the call."
 - Before your closing line, in every branch except wrong number, hostile/DNC, and Q5's hot path, ask one short question: would they like someone from the university to reach out with more information? If yes: run CALLBACK SCHEDULING. Then close, regardless of their answer.
+- Immediately before your closing line, in every branch except wrong number and hostile/DNC, ask one more short question: "Is there anything else you'd like to know?" If they say no (or equivalent): give your closing line right away. If they say yes or raise something: handle it using the Q&A rules below, then ask "Anything else?" again — keep repeating until they say no. Never give your closing line while this is still unresolved.
 - Use the caller's name only once, in the opening greeting. Never say it again, never ask them to confirm it, never switch to a different name even if they mention one — just continue without addressing them by name again.
 - Never restart the call or repeat the greeting once answered. If what they said doesn't make sense, seems unrelated, or you're not confident you understood it, don't guess — say "Sorry, I didn't quite catch that" and re-ask the same question once, slightly reworded. Still unclear after that: move on to the next question rather than getting stuck.
 - If the caller starts talking or asks a question while you're still mid-sentence, stop talking immediately — don't finish your sentence. Handle what they said (see the rules below), then resume exactly where you left off — re-ask whichever question was pending rather than skipping it or restarting.
@@ -182,23 +187,21 @@ def build_assistant(full_name: str | None = None) -> dict:
     assistant = {
         "model": {
             "provider": "openai",
-            "model": "gpt-4o",
+            # Trying gpt-4.1 in place of gpt-4o - the endCallPhrases belt-and-suspenders
+            # below was added for a gpt-4o quirk (finished closing line, didn't call
+            # end-call tool); watch the first live calls for whether that quirk is gone
+            # or different under 4.1, and whether branch-following (Q1-Q5) holds up.
+            "model": "gpt-4.1",
             "temperature": 0.3,
             "messages": [{"role": "system", "content": system_prompt}],
         },
         "voice": {
-            "provider": "11labs",
-            "voiceId": "21m00Tcm4TlvDq8ikWAM",
-            # eleven_multilingual_v2 (not an English-only turbo model) — handles
-            # accents/phrasing more robustly than a pure-English turbo model.
-            "model": "eleven_multilingual_v2",
-            # Vapi's optimizeStreamingLatency defaults to 3, which explicitly trades
-            # audio quality for ~200-400ms less latency — dropping it to 0 favors a
-            # stable, consistent voice over shaving off response time.
-            "optimizeStreamingLatency": 0,
-            "stability": 0.5,
-            "similarityBoost": 0.75,
-            "useSpeakerBoost": True,
+            # Vapi's native voice (version 2) in place of 11labs - lower latency/cost
+            # since it skips the 11labs hop. Naina - female, Indian-American accent -
+            # matches the "Aisha" persona better than Elliot (male, Canadian).
+            "provider": "vapi",
+            "voiceId": "Naina",
+            "version": "2",
         },
         "firstMessage": first_message,
         "transcriber": {
@@ -210,7 +213,14 @@ def build_assistant(full_name: str | None = None) -> dict:
             # acceptance at creation time does NOT mean Deepgram accepts it on a real
             # call - only a live call attempt proves that. Back to the model/param
             # combination with actual proven call history.
-            "model": "nova-2-phonecall",
+            # Trying Flux (flux-general-en) in place of nova-2-phonecall - confirmed
+            # valid against Vapi's live schema (not just docs), so it shouldn't die
+            # instantly like the nova-3-phonecall attempt did. Real risk is different:
+            # Flux only ships general/multi variants, no phonecall-tuned one like nova-2
+            # has, so real phone-line audio quality is unproven - watch transcripts on
+            # the first live calls. keywords is nova's boosting mechanism; unconfirmed
+            # whether Flux honors it at all, left in since it's harmless if ignored.
+            "model": "flux-general-en",
             "language": "en",
             "keywords": TRANSCRIBER_KEYTERMS_LEGACY,
         },

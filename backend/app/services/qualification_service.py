@@ -142,7 +142,17 @@ def _apply_extracted_data(lead: Lead, data: dict, transcript: str) -> None:
         lead.review_reason = "wrong_number"
         return
 
-    if _to_bool(data.get("reschedule_requested")):
+    # reschedule_requested is also set by the extraction model for the "would you like
+    # someone to reach out with more information?" callback offered near the end of
+    # every non-hot-path branch (see assistant_prompt.py) - not just the opening
+    # "I'm busy" case. Only treat it as an opening-only reschedule (discard everything
+    # else, retry later) when current_status was never captured, i.e. Q1 was never
+    # reached - otherwise the call went all the way through Q1-Q5 and its answers
+    # (including a confirmed email) are real and must not be thrown away. Observed live:
+    # two calls that fully completed through Q5 with a confirmed email still came back
+    # with reschedule_requested=true from the closing-question callback, and had their
+    # email silently discarded by this branch.
+    if _to_bool(data.get("reschedule_requested")) and not data.get("current_status"):
         reschedule_time = data.get("reschedule_time")
         lead.reschedule_time = str(reschedule_time).strip() if reschedule_time else None
         lead.review_reason = None
