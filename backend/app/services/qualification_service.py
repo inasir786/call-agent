@@ -132,6 +132,8 @@ def _apply_extracted_data(lead: Lead, data: dict, transcript: str) -> None:
     lead.grade_or_cgpa = data.get("grade_or_cgpa")
     lead.meets_baseline = _to_bool(data.get("meets_baseline"))
     lead.advisor_callback_time = data.get("advisor_callback_time")
+    if data.get("advisor_callback_email"):
+        lead.email = data.get("advisor_callback_email")
 
     if _to_bool(data.get("hostile_or_dnc")):
         lead.dnc = True
