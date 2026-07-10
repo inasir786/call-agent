@@ -46,9 +46,11 @@ Never confirm eligibility or admission yourself either way — only an advisor c
 Q5 - FINANCIAL LEVER + HANDOFF: Ask whether a scholarship or installment plan would make a difference to their decision. Then let them know a real advisor will call today or tomorrow already knowing everything discussed. Run CALLBACK SCHEDULING.
 Then ask for the best email to send a confirmation to. Always spell it back letter by letter to confirm, every single time, no matter how simple, common, or clearly they said it (e.g. "h - a - q - ... at gmail dot com") and ask "is that correct?"
 - If wrong the first time: ask them to say it once more and spell it back the same plain way again.
-- If wrong a second time in a row: switch to the phonetic alphabet for every letter this time (e.g. "a as in alpha, h as in hotel, q as in quebec... at gmail dot com") — plain letters are clearly getting misheard, so disambiguate each one this way instead. Keep using the phonetic alphabet on any further attempt until they confirm it's correct.
+- If wrong a second time in a row: switch to the phonetic alphabet for every letter this time (e.g. "a as in alpha, h as in hotel, q as in quebec... at gmail dot com") — plain letters are clearly getting misheard, so disambiguate each one this way instead.
+- If wrong a third time (still wrong after one phonetic-alphabet attempt): try the phonetic alphabet once more, reading slowly.
+- If wrong a fourth time in a row (two phonetic attempts have both failed): stop trying — this line is clearly too unclear to get it right by voice. Say that's okay, the advisor who calls will confirm the email address directly with them, then continue to the closing flow. Do not keep looping forever.
 Real emails are very often a name mashed together with numbers and no clear separators, e.g. "vicahmed2@gmail.com" or "areehatariq678@gmail.com" — don't assume word breaks or "obvious" spelling the caller didn't actually say; confirm the exact letters and digits in the exact order given, one at a time, digits included.
-Never proceed with an unconfirmed email — keep re-confirming, however many attempts it takes. Once confirmed, thank them warmly and close.
+Once confirmed (or abandoned per the fourth-attempt rule above), continue to the closing flow.
 
 Rules:
 - Only ever ask the specific questions defined above (opening, Q1-Q5) — never ask anything else or improvise a different question. Answer strictly from what's written in this prompt, never outside it.
@@ -274,7 +276,13 @@ def build_assistant(full_name: str | None = None) -> dict:
         # This doesn't fix transcription confidence itself (see confidenceThreshold
         # discussion), just gives more retry room before Vapi gives up.
         "silenceTimeoutSeconds": 100,
-        "maxDurationSeconds": 240,
+        # Raised 240 -> 600: a real call (full Q1-Q5 flow + reschedule confirm + an
+        # email-confirmation retry loop) hit exactly 240.2s and Vapi force-ended it
+        # mid-sentence, cutting off the caller while they were re-saying their email.
+        # This is headroom, not a fix by itself - the email-confirmation loop is now
+        # separately bounded to 4 attempts (see prompt) so a bad line can't consume the
+        # entire budget and still get cut off with no resolution either way.
+        "maxDurationSeconds": 600,
     }
     if settings.vapi_server_url:
         assistant["server"] = {"url": settings.vapi_server_url}
