@@ -220,18 +220,17 @@ def build_assistant(full_name: str | None = None) -> dict:
             "voiceSeconds": 0.1,
             "backoffSeconds": 0.5,
         },
-        # Vapi's default onNoPunctuationSeconds (1.5s) trades accuracy for latency. It
-        # was previously lowered to 0.5s, but real calls showed this cutting callers off
-        # mid-sentence during a brief thinking pause (e.g. "I will start this... fall"
-        # got truncated and mis-transcribed as "this 1") - raised back up partway
-        # (0.5 -> 0.8) to give multi-word answers room to finish, still well under
-        # Vapi's 1.5s default.
+        # Fixed-duration silence timers (transcriptionEndpointingPlan) were cutting
+        # callers off mid-sentence during a natural thinking pause (e.g. "I will start
+        # this... fall" got truncated and mis-transcribed as "this 1"), because a raw
+        # timer can't distinguish a mid-thought pause from an actual end of turn.
+        # smartEndpointingPlan (Vapi's recommended default for English) uses a model to
+        # judge the probability the caller has actually finished speaking instead of a
+        # fixed timeout, and takes precedence over transcriptionEndpointingPlan when set.
         "startSpeakingPlan": {
             "waitSeconds": 0.4,
-            "transcriptionEndpointingPlan": {
-                "onPunctuationSeconds": 0.1,
-                "onNoPunctuationSeconds": 0.8,
-                "onNumberSeconds": 0.5,
+            "smartEndpointingPlan": {
+                "provider": "livekit",
             },
         },
         # analysisPlan.structuredDataPlan (the old inline-schema mechanism) is
