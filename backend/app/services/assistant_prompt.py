@@ -13,7 +13,7 @@ Today is {today_date}. Judge "this Fall"/the upcoming intake relative to this da
 
 Sound like a real rep, not a script: use contractions, short sentences, varied wording (never repeat a sentence twice in one call), and occasional natural reactions ("Got it," "Alright," "Thanks," etc. — not every turn, never the same one twice in a row). Keep the call to about a minute, never more than three.
 
-Follow this flow one question at a time, waiting for an answer before moving on — never ask two things at once. The wording below is just an example; phrase each question naturally and a little differently each time.
+Follow this flow one question at a time, waiting for an answer before moving on — never ask two things at once. The wording below is just an example; phrase each question naturally and a little differently each time. Every question you ask must be under 120 characters — one short, single-clause sentence, never a longer or compound one.
 
 OPENING: Greet the caller{greeting_name_clause} and ask if they have a couple of minutes about their earlier admission enquiry.
 - Clearly positive (yes/okay/sure/go ahead): go to Q1.
@@ -54,6 +54,7 @@ Once confirmed (or abandoned per the fourth-attempt rule above), continue to the
 
 Rules:
 - Only ever ask the specific questions defined above (opening, Q1-Q5) — never ask anything else or improvise a different question. Answer strictly from what's written in this prompt, never outside it.
+- Every question you ask the caller (opening, Q1-Q5, "would they like someone to reach out," "anything else you'd like to know," etc.) must be under 120 characters — one short, single-clause sentence. Never combine it with extra explanation in the same sentence.
 - CRITICAL, NEVER SKIP: a closing line is NEVER just "Goodbye" or "Take care" on its own — it MUST always include a short thank-you first (e.g. "Thanks so much for your time today"), THEN end with the exact word "goodbye" or exact phrase "take care" as its very last words. Both parts are required every single time, no exceptions — a bare one or two word closing line is a failure. Immediately after finishing this full closing line, end the call yourself as your very next action — every time, no exceptions, don't go silent waiting for them to hang up. This must be invisible to the caller: never mention functions, tools, or "ending the call."
 - Before your closing line, in every branch except wrong number, hostile/DNC, and Q5's hot path, ask one short question: would they like someone from the university to reach out with more information? If yes: run CALLBACK SCHEDULING. Then close, regardless of their answer.
 - Immediately before your closing line, in every branch except wrong number and hostile/DNC, ask one more short question: "Is there anything else you'd like to know?" If they say no (or equivalent): give your closing line right away. If they say yes or raise something: handle it using the Q&A rules below, then ask "Anything else?" again — keep repeating until they say no. Never give your closing line while this is still unresolved.
@@ -69,11 +70,12 @@ Rules:
 - Only record information exactly as the caller said it — never guess, normalize, or invent a plausible-sounding answer.
 - Be warm, respectful, and brief at all times."""
 
-# Full original greeting — safe to use in full now that we're on the cascading
-# pipeline (TTS reliably speaks the entire scripted line; the earlier clipping
-# issue was specific to the realtime model, not this pipeline).
-FIRST_MESSAGE_WITH_NAME = "Assalam-o-alaikum, {first_name}? This is Aisha, an AI assistant from NIT — the university powered by Arizona State University. You enquired about admission some time back. Do you have two minutes?"
-FIRST_MESSAGE_GENERIC = "Assalam-o-alaikum! This is Aisha, an AI assistant from NIT — the university powered by Arizona State University. You enquired about admission some time back. Do you have two minutes?"
+# Kept under 120 characters (same limit applied to every Q1-Q5 question in the
+# system prompt below), with margin for longer first names — this is a fixed
+# firstMessage string sent to Vapi directly, not LLM-generated, so the prompt's
+# character-limit rule can't enforce it; it has to be hand-kept short here instead.
+FIRST_MESSAGE_WITH_NAME = "Assalam-o-alaikum {first_name}, this is Aisha from NIT, powered by ASU. You enquired before - got two minutes?"
+FIRST_MESSAGE_GENERIC = "Assalam-o-alaikum! This is Aisha from NIT, powered by ASU. You enquired before - got two minutes?"
 
 # Plain types only (no "type": ["string", "null"] unions) and no forced "required" /
 # "additionalProperties" — matching Vapi's own documented working structuredDataPlan
@@ -159,17 +161,6 @@ ANALYSIS_INSTRUCTIONS = (
     f"For meets_baseline, the eligibility baseline is: {settings.eligibility_baseline_description}."
 )
 
-# Deepgram nova-2 keyword boosting, format "term:intensifier". Keep this list short and
-# specific to real decision-branch words so it doesn't bias transcription of unrelated
-# speech. "Fall"/"Spring" are decision-critical for Q2 (hot-path branch hinges on hearing
-# "Fall" correctly) - a real call had it mis-transcribed as "this 1". "NIT" is the single
-# most-repeated word in the whole call and the shortest/most acoustically ambiguous - a
-# real call mis-transcribed it entirely as an unrelated phrase ("about NIT" -> "both an
-# ID"). "Timing"/"Cost" are Q3's other two decision-branch words alongside "another
-# university" - a real call mis-transcribed "timing" as "letters" repeatedly.
-TRANSCRIBER_KEYTERMS_LEGACY = ["NIT:4", "Fall:2", "Spring:2", "CGPA:2", "Timing:3", "Cost:2"]
-
-
 def build_assistant(full_name: str | None = None) -> dict:
     if full_name and full_name.strip():
         first_name = full_name.strip().split()[0]
@@ -189,68 +180,33 @@ def build_assistant(full_name: str | None = None) -> dict:
     assistant = {
         "model": {
             "provider": "openai",
-            # Trying gpt-4.1 in place of gpt-4o - the endCallPhrases belt-and-suspenders
-            # below was added for a gpt-4o quirk (finished closing line, didn't call
-            # end-call tool); watch the first live calls for whether that quirk is gone
-            # or different under 4.1, and whether branch-following (Q1-Q5) holds up.
-            "model": "gpt-4.1",
+            # Switched to the realtime speech-to-speech model at the user's explicit
+            # request. NOTE this was already tried once on this project and reverted:
+            # Vapi's own docs confirm turn-detection/interruption isn't configurable at
+            # all for realtime models (handled internally, no exposed levers), and real
+            # calls showed silence-timeouts and sentences getting clipped before
+            # finishing as a result. Watch the first live/test calls closely for both of
+            # those symptoms returning. "gpt-realtime-mini-2025-12-15" is the exact
+            # dated model string Vapi's API accepts (confirmed via a direct POST
+            # /assistant validation call - the bare "gpt-realtime-mini" name was
+            # rejected with a 400 listing all valid model.model values).
+            "model": "gpt-realtime-mini-2025-12-15",
             "temperature": 0.3,
             "messages": [{"role": "system", "content": system_prompt}],
         },
         "voice": {
-            # Vapi's native voice (version 2) in place of 11labs - lower latency/cost
-            # since it skips the 11labs hop. Naina - female, Indian-American accent -
-            # matches the "Aisha" persona better than Elliot (male, Canadian).
-            "provider": "vapi",
-            "voiceId": "Naina",
-            "version": "2",
+            # Realtime models generate speech natively as part of the model - voice
+            # must be one of OpenAI's own voices, not Vapi-native/11labs. "marin" was
+            # the voice used the previous time this project ran on a realtime model.
+            "provider": "openai",
+            "voiceId": "marin",
         },
         "firstMessage": first_message,
-        "transcriber": {
-            "provider": "deepgram",
-            # REVERTED from nova-3-phonecall/keyterm: that config passed Vapi's
-            # assistant-creation schema check (POST /assistant -> 201) but failed on an
-            # actual live call with ended_reason=call.in-progress.error-vapifault-
-            # deepgram-transcriber-failed (duration 0.06s - died instantly). Schema
-            # acceptance at creation time does NOT mean Deepgram accepts it on a real
-            # call - only a live call attempt proves that. Back to the model/param
-            # combination with actual proven call history.
-            # Trying Flux (flux-general-en) in place of nova-2-phonecall - confirmed
-            # valid against Vapi's live schema (not just docs), so it shouldn't die
-            # instantly like the nova-3-phonecall attempt did. Real risk is different:
-            # Flux only ships general/multi variants, no phonecall-tuned one like nova-2
-            # has, so real phone-line audio quality is unproven - watch transcripts on
-            # the first live calls. keywords is nova's boosting mechanism; unconfirmed
-            # whether Flux honors it at all, left in since it's harmless if ignored.
-            "model": "flux-general-en",
-            "language": "en",
-            "keywords": TRANSCRIBER_KEYTERMS_LEGACY,
-        },
-        # voiceSeconds raised 0.1 -> 0.2 (Vapi's own default): 0.1 was tuned to stop
-        # quick replies ("yes") from being swallowed right as the assistant finishes,
-        # but on real noisy phone lines it was likely also cutting callers off during
-        # a brief mid-sentence pause, sending a genuine fragment to the model instead
-        # of their full sentence - a different cause of "understood completely wrong"
-        # than transcription mis-hearing. 0.2 is a middle ground: still fast enough to
-        # catch a quick reply, less trigger-happy on a mid-thought pause than 0.1 was.
-        "stopSpeakingPlan": {
-            "numWords": 0,
-            "voiceSeconds": 0.2,
-            "backoffSeconds": 0.5,
-        },
-        # Fixed-duration silence timers (transcriptionEndpointingPlan) were cutting
-        # callers off mid-sentence during a natural thinking pause (e.g. "I will start
-        # this... fall" got truncated and mis-transcribed as "this 1"), because a raw
-        # timer can't distinguish a mid-thought pause from an actual end of turn.
-        # smartEndpointingPlan (Vapi's recommended default for English) uses a model to
-        # judge the probability the caller has actually finished speaking instead of a
-        # fixed timeout, and takes precedence over transcriptionEndpointingPlan when set.
-        "startSpeakingPlan": {
-            "waitSeconds": 0.4,
-            "smartEndpointingPlan": {
-                "provider": "livekit",
-            },
-        },
+        # No transcriber block and no stopSpeakingPlan/startSpeakingPlan: realtime
+        # speech-to-speech models process audio natively (no separate ASR step) and
+        # handle turn-taking/interruption internally - these are not exposed as
+        # assistant config for this model type, per Vapi's docs. This is exactly the
+        # limitation noted above: no tunable knob here if turn-taking misbehaves.
         # analysisPlan.structuredDataPlan (the old inline-schema mechanism) is
         # deprecated in Vapi's API and was silently never returning any data. The
         # current mechanism is a separately-created StructuredOutput resource
@@ -265,9 +221,10 @@ def build_assistant(full_name: str | None = None) -> dict:
         # endCallFunctionEnabled (the LLM's own end-call tool call, which only fires once
         # the full response has actually been generated/spoken) so the closing line always
         # completes. The prompt already instructs the model to call end-call immediately
-        # after its closing line every time - watch the first live calls under gpt-4.1 to
-        # confirm it doesn't reintroduce the earlier "said closing line, kept listening"
-        # quirk that endCallPhrases was originally added to guard against.
+        # after its closing line every time - watch the first live calls under
+        # gpt-realtime-mini to confirm it doesn't reintroduce the earlier "said closing
+        # line, kept listening" quirk that endCallPhrases was originally added to guard
+        # against (that quirk was observed on gpt-4o; unconfirmed on a realtime model).
         "endCallFunctionEnabled": True,
         # Raised again, 60 -> 100: a real call proved 60s still wasn't enough - the
         # caller was actively retrying (3 speech attempts, confirmed via call logs
