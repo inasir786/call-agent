@@ -7,7 +7,7 @@ export default function Layout({ onLogout }) {
         <div className="brand">
           <span className="brand-mark" />
           <div>
-            <div className="brand-name">Voice Agent</div>
+            <div className="brand-name">AI Calling Agent</div>
             <div className="brand-sub">Admissions Campaign</div>
           </div>
         </div>
@@ -15,7 +15,6 @@ export default function Layout({ onLogout }) {
           <NavLink to="/" end>Dashboard</NavLink>
           <NavLink to="/leads">Leads</NavLink>
           <NavLink to="/campaign">Campaign</NavLink>
-          <NavLink to="/test-call">Test call</NavLink>
         </nav>
         <button className="btn ghost logout" onClick={onLogout}>Log out</button>
       </aside>

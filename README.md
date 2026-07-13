@@ -47,10 +47,10 @@ Copy `.env.example` to `.env` and fill in your values (database URL, admin usern
 Run the backend:
 
 ```
-uvicorn app.main:app --reload --port 8001
+uvicorn app.main:app --reload --port 8000
 ```
 
-Tables are created automatically on first start. API docs: http://localhost:8001/docs
+Tables are created automatically on first start. API docs: http://localhost:8000/docs
 
 ## 2. Admin panel setup
 

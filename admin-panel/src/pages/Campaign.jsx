@@ -75,32 +75,44 @@ export default function Campaign() {
         </div>
       )}
       {message && <div className="notice">{message}</div>}
-      <div className="card narrow">
-        <h2>Scheduled start</h2>
-        <label>Start campaign automatically at</label>
-        <input
-          type="datetime-local"
-          value={scheduleInput}
-          onChange={(e) => setScheduleInput(e.target.value)}
-        />
-        <div className="actions">
-          <button className="btn primary" onClick={schedule} disabled={!scheduleInput}>Schedule</button>
-          {campaign.scheduled_start_at && (
-            <button className="btn" onClick={cancelSchedule}>Cancel schedule</button>
-          )}
+      <div className="campaign-grid">
+        <div className="card">
+          <h2>Scheduled start</h2>
+          <label>Start campaign automatically at</label>
+          <input
+            type="datetime-local"
+            value={scheduleInput}
+            onChange={(e) => setScheduleInput(e.target.value)}
+          />
+          <div className="actions">
+            <button className="btn primary" onClick={schedule} disabled={!scheduleInput}>Schedule</button>
+            {campaign.scheduled_start_at && (
+              <button className="btn" onClick={cancelSchedule}>Cancel schedule</button>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="card narrow">
-        <h2>Calling rules</h2>
-        <label>Calling starts at (hour, 0–23)</label>
-        <input type="number" min="0" max="23" value={campaign.calling_start_hour} onChange={set("calling_start_hour")} />
-        <label>Calling ends at (hour, 0–23)</label>
-        <input type="number" min="0" max="23" value={campaign.calling_end_hour} onChange={set("calling_end_hour")} />
-        <label>Calls at the same time</label>
-        <input type="number" min="1" max="50" value={campaign.max_concurrent_calls} onChange={set("max_concurrent_calls")} />
-        <label>Maximum retries per lead</label>
-        <input type="number" min="1" max="10" value={campaign.max_retries} onChange={set("max_retries")} />
-        <button className="btn primary" onClick={save}>Save changes</button>
+        <div className="card">
+          <h2>Calling rules</h2>
+          <div className="field-grid">
+            <div>
+              <label>Calling starts at (hour, 0–23)</label>
+              <input type="number" min="0" max="23" value={campaign.calling_start_hour} onChange={set("calling_start_hour")} />
+            </div>
+            <div>
+              <label>Calling ends at (hour, 0–23)</label>
+              <input type="number" min="0" max="23" value={campaign.calling_end_hour} onChange={set("calling_end_hour")} />
+            </div>
+            <div>
+              <label>Calls at the same time</label>
+              <input type="number" min="1" max="50" value={campaign.max_concurrent_calls} onChange={set("max_concurrent_calls")} />
+            </div>
+            <div>
+              <label>Maximum retries per lead</label>
+              <input type="number" min="1" max="10" value={campaign.max_retries} onChange={set("max_retries")} />
+            </div>
+          </div>
+          <button className="btn primary" onClick={save}>Save changes</button>
+        </div>
       </div>
     </div>
   )

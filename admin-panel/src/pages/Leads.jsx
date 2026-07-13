@@ -1,18 +1,17 @@
 import { useEffect, useRef, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { api, getToken } from "../api/client"
 import StatusBadge from "../components/StatusBadge"
 
 const STATUSES = ["", "pending", "calling", "no_answer", "reactivated", "nurture", "closed_lost", "needs_review", "failed", "invalid"]
 
 export default function Leads() {
+  const [searchParams] = useSearchParams()
   const [data, setData] = useState({ total: 0, items: [] })
-  const [status, setStatus] = useState("")
+  const [status, setStatus] = useState(searchParams.get("status") || "")
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
   const [message, setMessage] = useState("")
-  const [crmStatus, setCrmStatus] = useState(null)
-  const [syncing, setSyncing] = useState(false)
   const [resetting, setResetting] = useState(false)
   const fileRef = useRef()
   const pageSize = 25
@@ -24,35 +23,9 @@ export default function Leads() {
     setData(await api(`/api/leads?${params}`))
   }
 
-  const loadCrmStatus = async () => {
-    try {
-      setCrmStatus(await api("/api/crm/status"))
-    } catch (err) {
-      setMessage(err.message)
-    }
-  }
-
   useEffect(() => {
     load().catch((err) => setMessage(err.message))
   }, [status, page])
-
-  useEffect(() => {
-    loadCrmStatus()
-  }, [])
-
-  const syncCrm = async () => {
-    setSyncing(true)
-    try {
-      const result = await api("/api/crm/sync", { method: "POST" })
-      setMessage(`Synced ${result.synced} leads to CRM`)
-      await loadCrmStatus()
-      load()
-    } catch (err) {
-      setMessage(err.message)
-    } finally {
-      setSyncing(false)
-    }
-  }
 
   const resetAll = async () => {
     if (!window.confirm("Reset ALL leads back to pending — including reactivated, closed-lost, and do-not-call leads? This clears their call outcome (and any DNC lock) and queues them all for re-calling.")) {
@@ -125,23 +98,12 @@ export default function Leads() {
         <div className="actions">
           <input type="file" accept=".csv,.xlsx,.xls" ref={fileRef} onChange={importCsv} hidden />
           <button className="btn" onClick={() => fileRef.current.click()}>Import CSV/Excel</button>
-          <button className="btn" onClick={syncCrm} disabled={syncing || !crmStatus?.configured}>
-            {syncing ? "Syncing..." : "Sync CRM"}
-          </button>
           <button className="btn" onClick={resetAll} disabled={resetting}>
             {resetting ? "Resetting..." : "Reset all to pending"}
           </button>
           <button className="btn" onClick={() => exportCsv("/api/export/all", "all_leads.csv")}>Export all leads</button>
-          <button className="btn primary" onClick={() => exportCsv("/api/export/qualified", "reactivated_leads.csv")}>Export reactivated leads</button>
         </div>
       </div>
-      {crmStatus && (
-        <div className="notice">
-          {crmStatus.configured
-            ? `CRM: ${crmStatus.synced} synced, ${crmStatus.pending} pending`
-            : "CRM: no CRM_WEBHOOK_URL configured, sync disabled"}
-        </div>
-      )}
       {message && <div className="notice">{message}</div>}
       <div className="filters">
         <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }}>
