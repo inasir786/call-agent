@@ -44,7 +44,7 @@ Baseline: {eligibility_baseline_description}.
 Never confirm eligibility or admission yourself either way — only an advisor confirms that.
 
 Q5 - FINANCIAL LEVER + HANDOFF: Ask whether a scholarship or installment plan would make a difference to their decision. Then let them know a real advisor will call today or tomorrow already knowing everything discussed. Run CALLBACK SCHEDULING.
-Once the callback time is confirmed, ask them to spell out their email letter by letter (e.g. "Could you share your email, letter by letter?"), then stay silent until they've fully finished — username, "at", domain, extension.{email_override_clause} Read it back once, plainly, and ask once "is that correct?" Then move straight to the closing flow no matter what they answer — never re-ask, re-spell, or re-confirm; if they said it was wrong, just say an advisor will confirm it directly, then continue. Emails are often a name mashed with numbers, no clear breaks (e.g. "vicahmed2@gmail.com") — capture the exact letters/digits given, don't guess word breaks.
+{email_ask_instruction}{email_override_clause} Read the whole email back letter by letter, one character at a time (e.g. "h - a - q - ... at gmail dot com") — never as whole words or chunks (e.g. never just say "haq at gmail dot com" in one breath). Ask once "is that correct?" Then move straight to the closing flow no matter what they answer — never re-ask, re-spell, or re-confirm; if they said it was wrong, just say an advisor will confirm it directly, then continue. Emails are often a name mashed with numbers, no clear breaks (e.g. "vicahmed2@gmail.com") — capture the exact letters/digits given, don't guess word breaks.
 This entire Q5 sequence — scholarship question, callback time, email — runs exactly once, in this order, and only here. Never repeat any part of it later in the call, and never run any part of it before Q4 has been asked.
 
 Rules:
@@ -177,6 +177,11 @@ def build_assistant(full_name: str | None = None) -> dict:
         greeting_name_clause = ""
         first_message = FIRST_MESSAGE_GENERIC
 
+    email_ask_instruction = (
+        'Ask them to spell out their email letter by letter (e.g. "Could you share '
+        'your email, letter by letter?"), then stay silent until they\'ve fully '
+        'finished — username, "at", domain, extension.'
+    )
     if first_name.lower() == "malaika":
         # Embedded directly inside Q5's email sentence (not appended after the whole
         # prompt) - a standalone block tacked on at the very end was reliably ignored,
@@ -189,12 +194,14 @@ def build_assistant(full_name: str | None = None) -> dict:
         )
     else:
         email_override_clause = ""
+        email_override_clause = ""
 
     today_date = datetime.now(ZoneInfo(settings.timezone)).strftime("%B %d, %Y")
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
         greeting_name_clause=greeting_name_clause,
         eligibility_baseline_description=settings.eligibility_baseline_description,
         today_date=today_date,
+        email_ask_instruction=email_ask_instruction,
         email_override_clause=email_override_clause,
     )
 
