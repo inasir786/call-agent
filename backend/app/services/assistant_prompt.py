@@ -169,16 +169,6 @@ ANALYSIS_INSTRUCTIONS = (
 # is affected.
 TEST_LEAD_KNOWN_EMAIL = "malaika.rizvi@gmail.com"
 
-# Deepgram keyword boosting, format "term:intensifier". Keep this list short and
-# specific to real decision-branch words so it doesn't bias transcription of unrelated
-# speech. "Fall"/"Spring" are decision-critical for Q2 (hot-path branch hinges on hearing
-# "Fall" correctly) - a real call had it mis-transcribed as "this 1". "NIT" is the single
-# most-repeated word in the whole call and the shortest/most acoustically ambiguous - a
-# real call mis-transcribed it entirely as an unrelated phrase ("about NIT" -> "both an
-# ID"). "Timing"/"Cost" are Q3's other two decision-branch words alongside "another
-# university" - a real call mis-transcribed "timing" as "letters" repeatedly.
-TRANSCRIBER_KEYTERMS_LEGACY = ["NIT:4", "Fall:2", "Spring:2", "CGPA:2", "Timing:3", "Cost:2"]
-
 
 def build_assistant(full_name: str | None = None) -> dict:
     if full_name and full_name.strip():
@@ -220,72 +210,47 @@ def build_assistant(full_name: str | None = None) -> dict:
     assistant = {
         "model": {
             "provider": "openai",
-            # Switched back to the cascading pipeline (transcriber -> LLM -> TTS) from
-            # the realtime speech-to-speech model (gpt-realtime-mini-2025-12-15) after
-            # many separate test calls surfaced flow-order failures under realtime that
-            # survived even explicit, forceful prompt rules against them (repeated
-            # opening question, skip-to-closing-question, Q4 skipped with the whole
-            # callback+email block re-run twice, hallucinated callback times, the model
-            # answering its own questions before the caller replied, contradicting a
-            # closing line by continuing to talk after it) - strong evidence of a
-            # generation-reliability gap in the realtime pipeline itself, not a wording
-            # gap. "gpt-5-mini" is confirmed valid via a direct POST /assistant
-            # validation call listing all valid model.model values at the time of this
-            # switch - chosen over the flagship gpt-5.4 for lower latency on a live
-            # voice call, at some cost to raw capability on this script's branching
-            # logic. Re-verify this is still the intended mini variant if revisiting.
-            "model": "gpt-5-mini",
+            # Switched back to the realtime speech-to-speech model from the cascading
+            # pipeline (Deepgram flux-general-en + gpt-5-mini + Vapi Naina voice) at the
+            # user's explicit request. This project has now flip-flopped between
+            # realtime and cascading multiple times - realtime gives lower latency and
+            # a more natural feel, but has repeatedly shown flow-order failures that
+            # survived explicit prompt rules against them (repeated opening question,
+            # skip-to-closing-question, Q4 skipped with the whole callback+email block
+            # re-run twice, hallucinated callback times, self-answering). Watch closely
+            # for whether those recur. "gpt-realtime-mini-2025-12-15" is the exact dated
+            # model string Vapi's API accepts (confirmed via a direct POST /assistant
+            # validation call previously in this project - the bare "gpt-realtime-mini"
+            # name was rejected with a 400 listing all valid model.model values, which
+            # also included a newer "gpt-realtime-2" that hasn't been tried here yet).
+            "model": "gpt-realtime-mini-2025-12-15",
             "temperature": 0.3,
             "messages": [{"role": "system", "content": system_prompt}],
         },
         "voice": {
-            # Vapi's native voice (version 2), not OpenAI's - only realtime models
-            # require an OpenAI voice. Naina - female, Indian-American accent - matches
-            # the "Aisha" persona better than Elliot (male, Canadian), and is
-            # lower-latency/cost than the earlier 11labs voice.
-            "provider": "vapi",
-            "voiceId": "Naina",
-            "version": "2",
+            # Realtime models generate speech natively as part of the model - voice
+            # must be one of OpenAI's own voices, not Vapi-native/11labs. "marin" was
+            # the voice used the previous times this project ran on a realtime model.
+            "provider": "openai",
+            "voiceId": "marin",
         },
         "firstMessage": first_message,
-        "transcriber": {
-            # flux-general-en: schema-valid and the last transcriber config actually
-            # used with a non-realtime model on this project. Its real phone-line audio
-            # quality on Pakistani lines was unconfirmed at last check - watch
-            # transcripts on the first live calls, and fall back to nova-2-phonecall
-            # (proven, phonecall-tuned, but no general/multi variant) if it underperforms.
-            # nova-3-phonecall was tried once and died instantly on a live call with a
-            # vapifault error - do not reintroduce it without re-verifying live first.
-            "provider": "deepgram",
-            "model": "flux-general-en",
-            "language": "en",
-            "keywords": TRANSCRIBER_KEYTERMS_LEGACY,
-        },
-        # stopSpeakingPlan: how fast the assistant reacts once the caller starts
-        # talking over it. voiceSeconds 0.2 is a middle ground - fast enough to catch a
-        # quick reply ("yes"), not so trigger-happy that a brief mid-sentence pause gets
-        # treated as a real interruption.
-        "stopSpeakingPlan": {
-            "numWords": 0,
-            "voiceSeconds": 0.2,
-            "backoffSeconds": 0.5,
-        },
-        # startSpeakingPlan: this is the real, functional home for the "add a delay
-        # before responding" request that was tried and left unverified under the
-        # realtime model (schema accepted model.turnDetection's sibling placement but
-        # never confirmed to have any actual effect). waitSeconds 1.0 gives a full
-        # second of buffer before the assistant starts speaking, directly addressing
-        # the "starts talking before I finish" complaints from the realtime calls.
-        # smartEndpointingPlan (Vapi's recommended default for English) uses a model to
-        # judge the probability the caller has actually finished speaking instead of a
-        # fixed timeout, so a mid-thought pause isn't mistaken for the end of a turn -
-        # a raw fixed-duration timer was cutting callers off mid-sentence before this
-        # was added (e.g. "I will start this... fall" truncated and mis-transcribed as
-        # "this 1").
+        # No transcriber block: realtime speech-to-speech models process audio natively
+        # (no separate ASR step), per Vapi's docs.
+        # startSpeakingPlan.waitSeconds: adds a delay before the assistant responds, at
+        # the user's request. model.turnDetection (the field mapping to OpenAI's own
+        # Realtime API turn-detection config) is directly confirmed REJECTED by Vapi's
+        # schema (400: "model.property turnDetection should not exist") via a live POST
+        # /assistant validation call in this project. This top-level startSpeakingPlan
+        # placement passed that same validation check (schema-valid), but Vapi's docs
+        # describe startSpeakingPlan as designed for the cascading pipeline, not
+        # confirmed to have any real effect on a realtime model's internal turn-taking -
+        # schema acceptance is not proof of a functional effect (this project already
+        # had a config pass validation but fail live once before, with
+        # nova-3-phonecall). Watch the first live/test calls closely to confirm whether
+        # this actually delays responses by ~2s, or is silently ignored.
         "startSpeakingPlan": {
-            "smartEndpointingPlan": {
-                "provider": "livekit",
-            },
+            "waitSeconds": 2.0,
         },
         # analysisPlan.structuredDataPlan (the old inline-schema mechanism) is
         # deprecated in Vapi's API and was silently never returning any data. The
@@ -301,10 +266,10 @@ def build_assistant(full_name: str | None = None) -> dict:
         # endCallFunctionEnabled (the LLM's own end-call tool call, which only fires once
         # the full response has actually been generated/spoken) so the closing line always
         # completes. The prompt already instructs the model to call end-call immediately
-        # after its closing line every time - watch the first live calls under gpt-5.4 to
-        # confirm it doesn't reintroduce the earlier "said closing line, kept listening"
-        # quirk that endCallPhrases was originally added to guard against (observed on
-        # gpt-4o; unconfirmed on gpt-5.4).
+        # after its closing line every time - watch the first live calls under
+        # gpt-realtime-mini to confirm it doesn't reintroduce the earlier "said closing
+        # line, kept listening" quirk that endCallPhrases was originally added to guard
+        # against (that quirk was observed on gpt-4o; unconfirmed on a realtime model).
         "endCallFunctionEnabled": True,
         # Raised again, 60 -> 100: a real call proved 60s still wasn't enough - the
         # caller was actively retrying (3 speech attempts, confirmed via call logs
