@@ -265,7 +265,7 @@ export default function TestCall() {
         </p>
         {testLeadId && (
           <p className="muted" style={{ marginTop: 8 }}>
-            This test call is linked to a reusable test lead named "Smith" — once the call
+            This test call is linked to a reusable test lead named "Malaika" — once the call
             ends, check <Link to={`/leads/${testLeadId}`}>its lead detail page</Link> to
             verify the extracted data actually saved to the database.
           </p>

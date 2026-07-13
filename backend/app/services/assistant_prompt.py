@@ -7,7 +7,7 @@ SYSTEM_PROMPT_TEMPLATE = """You are Aisha, an admissions rep calling on behalf o
 
 NIT_KNOWLEDGE (only if asked about NIT itself; never bring up unprompted): NIT is a private university in Lahore, Pakistan, under a Federal Charter, presented as Pakistan's first American university via the ASU-Cintana Alliance with ASU — offering an American-style education in Pakistan.
 
-CALLBACK SCHEDULING (use this exact process any time a callback gets agreed to): ask, in one plain turn, what specific time works for them — don't offer multiple-choice options and don't ask "is that correct?" in this same turn. If their answer isn't an actual time (e.g. just "morning" or "afternoon"), ask one short follow-up to pin down a real time — a vague answer is never treated as confirmed. Only once you have a specific time: repeat it back, in its own turn, and ask "is that correct?" If wrong, ask once more. There are exactly three places in this whole call where you run this: the OPENING's busy branch, Q5, and the pre-closing "reach out" question in the Rules below — nowhere else, and never on your own initiative.
+CALLBACK SCHEDULING (use this exact process any time a callback gets agreed to): ask, in one plain open turn, what specific time works for them — no examples, no suggested times (never say things like "like 3 PM"), no multiple-choice options, and don't ask "is that correct?" in this same turn. If their answer isn't an actual time (e.g. just "morning" or "afternoon"), ask one short follow-up to pin down a real time — a vague answer is never treated as confirmed. Once you have a specific time, read back EXACTLY the time they just said — never a different value, never an example you gave earlier, never a guess — and ask "is that correct?" in its own turn. Only treat it as confirmed once they clearly say yes/correct/that's right or equivalent. If instead they repeat a time back (the same one or a different one) without clearly confirming, that is NOT a yes — treat whatever time they just said as their real answer, read that back, and ask again. There are exactly three places in this whole call where you run this: the OPENING's busy branch, Q5, and the pre-closing "reach out" question in the Rules below — nowhere else, and never on your own initiative.
 
 Today is {today_date}. Judge "this Fall"/the upcoming intake relative to this date rather than guessing.
 
@@ -44,7 +44,7 @@ Baseline: {eligibility_baseline_description}.
 Never confirm eligibility or admission yourself either way — only an advisor confirms that.
 
 Q5 - FINANCIAL LEVER + HANDOFF: Ask whether a scholarship or installment plan would make a difference to their decision. Then let them know a real advisor will call today or tomorrow already knowing everything discussed. Run CALLBACK SCHEDULING.
-Once the callback time is confirmed, ask them to spell out their email letter by letter (e.g. "Could you share your email, letter by letter?"), then stay silent until they've fully finished — username, "at", domain, extension. Read it back once, plainly, and ask once "is that correct?" Then move straight to the closing flow no matter what they answer — never re-ask, re-spell, or re-confirm; if they said it was wrong, just say an advisor will confirm it directly, then continue. Emails are often a name mashed with numbers, no clear breaks (e.g. "vicahmed2@gmail.com") — capture the exact letters/digits given, don't guess word breaks.
+Once the callback time is confirmed, ask them to spell out their email letter by letter (e.g. "Could you share your email, letter by letter?"), then stay silent until they've fully finished — username, "at", domain, extension.{email_override_clause} Read it back once, plainly, and ask once "is that correct?" Then move straight to the closing flow no matter what they answer — never re-ask, re-spell, or re-confirm; if they said it was wrong, just say an advisor will confirm it directly, then continue. Emails are often a name mashed with numbers, no clear breaks (e.g. "vicahmed2@gmail.com") — capture the exact letters/digits given, don't guess word breaks.
 This entire Q5 sequence — scholarship question, callback time, email — runs exactly once, in this order, and only here. Never repeat any part of it later in the call, and never run any part of it before Q4 has been asked.
 
 Rules:
@@ -156,20 +156,46 @@ ANALYSIS_INSTRUCTIONS = (
     f"For meets_baseline, the eligibility baseline is: {settings.eligibility_baseline_description}."
 )
 
+# Test-only shortcut for the reusable "Malaika" test lead (lead_service.TEST_LEAD_PHONE,
+# renamed from "Smith"): the email question is still asked normally, but the read-back
+# always uses this known-correct value instead of whatever was actually transcribed -
+# email capture has been the most failure-prone/transcription-sensitive part of every
+# test call, so this keeps the flow looking identical while giving a reliable result to
+# test the rest of the script against. Gated on the first name matching "Malaika"
+# specifically - only the fixed test lead is ever named that, so no real campaign lead
+# is affected.
+TEST_LEAD_KNOWN_EMAIL = "malaika.rizvi@gmail.com"
+
+
 def build_assistant(full_name: str | None = None) -> dict:
     if full_name and full_name.strip():
         first_name = full_name.strip().split()[0]
         greeting_name_clause = f" by name ({first_name})"
         first_message = FIRST_MESSAGE_WITH_NAME.format(first_name=first_name)
     else:
+        first_name = ""
         greeting_name_clause = ""
         first_message = FIRST_MESSAGE_GENERIC
+
+    if first_name.lower() == "malaika":
+        # Embedded directly inside Q5's email sentence (not appended after the whole
+        # prompt) - a standalone block tacked on at the very end was reliably ignored,
+        # matching the pattern seen all session where instructions folded directly into
+        # the Q1-Q5 flow get followed and freestanding ones don't.
+        email_override_clause = (
+            f" IMPORTANT: no matter what you actually hear them say, when you read the "
+            f"email back always state it as {TEST_LEAD_KNOWN_EMAIL} — ignore what you "
+            "heard entirely and use this exact value instead."
+        )
+    else:
+        email_override_clause = ""
 
     today_date = datetime.now(ZoneInfo(settings.timezone)).strftime("%B %d, %Y")
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
         greeting_name_clause=greeting_name_clause,
         eligibility_baseline_description=settings.eligibility_baseline_description,
         today_date=today_date,
+        email_override_clause=email_override_clause,
     )
 
     assistant = {

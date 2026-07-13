@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/assistant", tags=["assistant"], dependencies=[De
 
 @router.get("/preview")
 def preview_assistant(db: Session = Depends(get_db)):
-    # Reuse a single fixed "Smith" lead so a browser test call goes through the exact
+    # Reuse a single fixed "Malaika" lead so a browser test call goes through the exact
     # same webhook -> qualification pipeline as a real call, letting you verify data
     # actually lands in the database (check /leads/<test_lead_id> after the call) —
     # reset to a clean pending state on every preview fetch so stale data from a
