@@ -259,16 +259,16 @@ def build_assistant(full_name: str | None = None) -> dict:
         "artifactPlan": {
             "structuredOutputIds": [sid] if (sid := get_structured_output_id()) else [],
         },
+        # endCallPhrases was removed: Vapi hangs up the instant it detects the phrase in
+        # the assistant's speech/transcript, not after the TTS audio finishes playing it -
+        # this was cutting the closing line off mid-word ("good..."). Relying solely on
+        # endCallFunctionEnabled (the LLM's own end-call tool call, which only fires once
+        # the full response has actually been generated/spoken) so the closing line always
+        # completes. The prompt already instructs the model to call end-call immediately
+        # after its closing line every time - watch the first live calls under gpt-4.1 to
+        # confirm it doesn't reintroduce the earlier "said closing line, kept listening"
+        # quirk that endCallPhrases was originally added to guard against.
         "endCallFunctionEnabled": True,
-        # Belt-and-suspenders for ending the call: endCallFunctionEnabled relies on the
-        # LLM remembering to invoke the end-call tool after its closing line, which can
-        # silently fail (observed live: it said a full closing line and then just kept
-        # listening). endCallPhrases is a deterministic Vapi-side check instead - if the
-        # assistant's own speech contains one of these words, Vapi hangs up on its own
-        # regardless of whether the model called the tool. The prompt requires every
-        # closing line to end on "goodbye" or "take care" so this always has something
-        # to match on.
-        "endCallPhrases": ["goodbye", "take care"],
         # Raised again, 60 -> 100: a real call proved 60s still wasn't enough - the
         # caller was actively retrying (3 speech attempts, confirmed via call logs
         # that Deepgram received audio each time) across a 70.1s gap between their
