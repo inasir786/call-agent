@@ -47,7 +47,7 @@ Never confirm eligibility or admission yourself either way — only an advisor c
 
 Q5 - FINANCIAL LEVER + HANDOFF: Ask whether a scholarship or installment plan would make a difference to their decision. Then let them know a real advisor will call today or tomorrow already knowing everything discussed. Run CALLBACK SCHEDULING to completion — that means waiting for the caller's actual reply to "is that correct?" about the callback time before doing anything else; asking that question is not the end of this step, hearing a real reply to it is.
 HARD GATE: the email step below is mandatory and always comes immediately after the callback time is confirmed — there is no path through Q5 that skips it, and confirming the callback time is never itself a reason to move to the closing line.
-{email_ask_instruction}{email_override_clause} Read it back once, plainly, and ask once "is that correct?" Then move straight to the closing flow no matter what they answer — never re-ask, re-spell, or re-confirm; if they said it was wrong, just say an advisor will confirm it directly, then continue. Emails are often a name mashed with numbers, no clear breaks (e.g. "vicahmed2@gmail.com") — capture the exact letters/digits given, don't guess word breaks.
+{email_ask_instruction}{email_override_clause} Read it back once, plainly, and ask once "is that correct?" Then move straight to the closing flow no matter what they answer — never re-ask, re-spell, or re-confirm; if they said it was wrong, just say an advisor will confirm it directly, then continue. ABSOLUTE LIMIT: once you have said "is that correct?" about the email one time, the email topic is permanently closed for the rest of the call, no matter what the caller says next (even "no," "wrong," or anything else) — never say the word "email" again in this call after that point, for any reason. Emails are often a name mashed with numbers, no clear breaks (e.g. "vicahmed2@gmail.com") — capture the exact letters/digits given, don't guess word breaks.
 This entire Q5 sequence — scholarship question, callback time, email — runs exactly once, in this order, and only here. Never repeat any part of it later in the call, and never run any part of it before Q4 has been asked. Never give the closing line until the email step has actually happened. Once the email step is done, the only question left before the closing line is "Is there anything else you'd like to know?" (per the Rules) — do NOT ask "would they like someone to reach out with more information" (that's already been fully handled by this Q5 sequence), do NOT run CALLBACK SCHEDULING again, do NOT ask for the time or email again in any form.
 
 Rules:
@@ -57,7 +57,7 @@ Rules:
 - Before your closing line, in every branch except wrong number, hostile/DNC, and Q5's hot path, ask one short question: would they like someone from the university to reach out with more information? If yes: run CALLBACK SCHEDULING exactly once, then give your closing line immediately in the same turn — do NOT ask for email, do NOT run CALLBACK SCHEDULING again no matter what they say next, do NOT ask this reach-out question again. If no: close right away. This question ONLY ever comes at the very end of the flow, immediately before the closing line — never right after the opening, never in place of Q1, never as a substitute for any other pending question. If Q1 has not been asked yet, go ask Q1 instead — do not ask this question first under any circumstance.
 - Immediately before your closing line, in every branch except wrong number and hostile/DNC, ask one more short question: "Is there anything else you'd like to know?" If they say no (or equivalent): give your closing line right away. If they say yes or raise something: handle it using the Q&A rules below, then ask "Anything else?" again — keep repeating until they say no. Never give your closing line while this is still unresolved.
 - Use the caller's name only once, in the opening greeting. Never say it again, never ask them to confirm it, never switch to a different name even if they mention one — just continue without addressing them by name again.
-- Never restart the call or repeat the greeting once answered. If what they said doesn't make sense, seems unrelated, or you're not confident you understood it, don't guess — say "Sorry, I didn't quite catch that" and re-ask the exact same pending question once, slightly reworded. Still unclear after that: move on to the next question rather than getting stuck. An unclear answer is NEVER a reason to switch to a different branch or a different question than the one actually pending — e.g. an unclear reply to Q1 means re-ask Q1, it never means offering a callback/WhatsApp or jumping anywhere else. Only the OPENING's own branches (busy/wrong number/hostile) ever trigger the callback-or-WhatsApp offer, and only when that is truly what the caller said in reply to the opening itself.
+- Never restart the call or repeat the greeting once answered. If what they said doesn't make sense, seems unrelated, or you're not confident you understood it, don't guess — say "Sorry, I didn't quite catch that" and re-ask the exact same pending question once, slightly reworded. HARD CAP: this "didn't catch that" re-ask can only ever happen ONCE per question, no exceptions. If the very next answer to that re-ask is ALSO unclear, do not say "didn't catch that" again and do not ask that question a third time — immediately move on to the next question in the flow, treating whatever was said as unanswered/unknown for that field. Never repeat "Sorry, I didn't quite catch that" back-to-back for the same question more than once in a row. An unclear answer is NEVER a reason to switch to a different branch or a different question than the one actually pending — e.g. an unclear reply to Q1 means re-ask Q1 (at most once), it never means offering a callback/WhatsApp or jumping anywhere else. Only the OPENING's own branches (busy/wrong number/hostile) ever trigger the callback-or-WhatsApp offer, and only when that is truly what the caller said in reply to the opening itself.
 - If the caller starts talking or asks a question while you're still mid-sentence, stop talking immediately — don't finish your sentence. Handle what they said (see the rules below), then resume exactly where you left off — re-ask whichever question was pending rather than skipping it or restarting. If you notice you've already said several different fragments or rephrasings back to back because of an interruption, do NOT try to patch them together or keep adding more — stop, and say the pending question once, cleanly, as a single fresh sentence. Never stack multiple partial attempts into one turn.
 - Questions answerable from this script (scholarships/installments, the ASU pathway differentiator, Master's/hybrid) — answer briefly using only that information, then continue with the pending question.
 - Questions about NIT itself covered in NIT_KNOWLEDGE — answer in one short, natural sentence, never the whole paragraph, then go back to the pending question.
@@ -169,6 +169,16 @@ ANALYSIS_INSTRUCTIONS = (
 # is affected.
 TEST_LEAD_KNOWN_EMAIL = "malaika.rizvi@gmail.com"
 
+# Deepgram keyword boosting, format "term:intensifier". Keep this list short and
+# specific to real decision-branch words so it doesn't bias transcription of unrelated
+# speech. "Fall"/"Spring" are decision-critical for Q2 (hot-path branch hinges on hearing
+# "Fall" correctly) - a real call had it mis-transcribed as "this 1". "NIT" is the single
+# most-repeated word in the whole call and the shortest/most acoustically ambiguous - a
+# real call mis-transcribed it entirely as an unrelated phrase ("about NIT" -> "both an
+# ID"). "Timing"/"Cost" are Q3's other two decision-branch words alongside "another
+# university" - a real call mis-transcribed "timing" as "letters" repeatedly.
+TRANSCRIBER_KEYTERMS_LEGACY = ["NIT:4", "Fall:2", "Spring:2", "CGPA:2", "Timing:3", "Cost:2"]
+
 
 def build_assistant(full_name: str | None = None) -> dict:
     if full_name and full_name.strip():
@@ -197,7 +207,6 @@ def build_assistant(full_name: str | None = None) -> dict:
         )
     else:
         email_override_clause = ""
-        email_override_clause = ""
 
     today_date = datetime.now(ZoneInfo(settings.timezone)).strftime("%B %d, %Y")
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
@@ -211,33 +220,73 @@ def build_assistant(full_name: str | None = None) -> dict:
     assistant = {
         "model": {
             "provider": "openai",
-            # Switched to the realtime speech-to-speech model at the user's explicit
-            # request. NOTE this was already tried once on this project and reverted:
-            # Vapi's own docs confirm turn-detection/interruption isn't configurable at
-            # all for realtime models (handled internally, no exposed levers), and real
-            # calls showed silence-timeouts and sentences getting clipped before
-            # finishing as a result. Watch the first live/test calls closely for both of
-            # those symptoms returning. "gpt-realtime-mini-2025-12-15" is the exact
-            # dated model string Vapi's API accepts (confirmed via a direct POST
-            # /assistant validation call - the bare "gpt-realtime-mini" name was
-            # rejected with a 400 listing all valid model.model values).
-            "model": "gpt-realtime-mini-2025-12-15",
+            # Switched back to the cascading pipeline (transcriber -> LLM -> TTS) from
+            # the realtime speech-to-speech model (gpt-realtime-mini-2025-12-15) after
+            # many separate test calls surfaced flow-order failures under realtime that
+            # survived even explicit, forceful prompt rules against them (repeated
+            # opening question, skip-to-closing-question, Q4 skipped with the whole
+            # callback+email block re-run twice, hallucinated callback times, the model
+            # answering its own questions before the caller replied, contradicting a
+            # closing line by continuing to talk after it) - strong evidence of a
+            # generation-reliability gap in the realtime pipeline itself, not a wording
+            # gap. "gpt-5-mini" is confirmed valid via a direct POST /assistant
+            # validation call listing all valid model.model values at the time of this
+            # switch - chosen over the flagship gpt-5.4 for lower latency on a live
+            # voice call, at some cost to raw capability on this script's branching
+            # logic. Re-verify this is still the intended mini variant if revisiting.
+            "model": "gpt-5-mini",
             "temperature": 0.3,
             "messages": [{"role": "system", "content": system_prompt}],
         },
         "voice": {
-            # Realtime models generate speech natively as part of the model - voice
-            # must be one of OpenAI's own voices, not Vapi-native/11labs. "marin" was
-            # the voice used the previous time this project ran on a realtime model.
-            "provider": "openai",
-            "voiceId": "marin",
+            # Vapi's native voice (version 2), not OpenAI's - only realtime models
+            # require an OpenAI voice. Naina - female, Indian-American accent - matches
+            # the "Aisha" persona better than Elliot (male, Canadian), and is
+            # lower-latency/cost than the earlier 11labs voice.
+            "provider": "vapi",
+            "voiceId": "Naina",
+            "version": "2",
         },
         "firstMessage": first_message,
-        # No transcriber block and no stopSpeakingPlan/startSpeakingPlan: realtime
-        # speech-to-speech models process audio natively (no separate ASR step) and
-        # handle turn-taking/interruption internally - these are not exposed as
-        # assistant config for this model type, per Vapi's docs. This is exactly the
-        # limitation noted above: no tunable knob here if turn-taking misbehaves.
+        "transcriber": {
+            # flux-general-en: schema-valid and the last transcriber config actually
+            # used with a non-realtime model on this project. Its real phone-line audio
+            # quality on Pakistani lines was unconfirmed at last check - watch
+            # transcripts on the first live calls, and fall back to nova-2-phonecall
+            # (proven, phonecall-tuned, but no general/multi variant) if it underperforms.
+            # nova-3-phonecall was tried once and died instantly on a live call with a
+            # vapifault error - do not reintroduce it without re-verifying live first.
+            "provider": "deepgram",
+            "model": "flux-general-en",
+            "language": "en",
+            "keywords": TRANSCRIBER_KEYTERMS_LEGACY,
+        },
+        # stopSpeakingPlan: how fast the assistant reacts once the caller starts
+        # talking over it. voiceSeconds 0.2 is a middle ground - fast enough to catch a
+        # quick reply ("yes"), not so trigger-happy that a brief mid-sentence pause gets
+        # treated as a real interruption.
+        "stopSpeakingPlan": {
+            "numWords": 0,
+            "voiceSeconds": 0.2,
+            "backoffSeconds": 0.5,
+        },
+        # startSpeakingPlan: this is the real, functional home for the "add a delay
+        # before responding" request that was tried and left unverified under the
+        # realtime model (schema accepted model.turnDetection's sibling placement but
+        # never confirmed to have any actual effect). waitSeconds 1.0 gives a full
+        # second of buffer before the assistant starts speaking, directly addressing
+        # the "starts talking before I finish" complaints from the realtime calls.
+        # smartEndpointingPlan (Vapi's recommended default for English) uses a model to
+        # judge the probability the caller has actually finished speaking instead of a
+        # fixed timeout, so a mid-thought pause isn't mistaken for the end of a turn -
+        # a raw fixed-duration timer was cutting callers off mid-sentence before this
+        # was added (e.g. "I will start this... fall" truncated and mis-transcribed as
+        # "this 1").
+        "startSpeakingPlan": {
+            "smartEndpointingPlan": {
+                "provider": "livekit",
+            },
+        },
         # analysisPlan.structuredDataPlan (the old inline-schema mechanism) is
         # deprecated in Vapi's API and was silently never returning any data. The
         # current mechanism is a separately-created StructuredOutput resource
@@ -252,10 +301,10 @@ def build_assistant(full_name: str | None = None) -> dict:
         # endCallFunctionEnabled (the LLM's own end-call tool call, which only fires once
         # the full response has actually been generated/spoken) so the closing line always
         # completes. The prompt already instructs the model to call end-call immediately
-        # after its closing line every time - watch the first live calls under
-        # gpt-realtime-mini to confirm it doesn't reintroduce the earlier "said closing
-        # line, kept listening" quirk that endCallPhrases was originally added to guard
-        # against (that quirk was observed on gpt-4o; unconfirmed on a realtime model).
+        # after its closing line every time - watch the first live calls under gpt-5.4 to
+        # confirm it doesn't reintroduce the earlier "said closing line, kept listening"
+        # quirk that endCallPhrases was originally added to guard against (observed on
+        # gpt-4o; unconfirmed on gpt-5.4).
         "endCallFunctionEnabled": True,
         # Raised again, 60 -> 100: a real call proved 60s still wasn't enough - the
         # caller was actively retrying (3 speech attempts, confirmed via call logs
