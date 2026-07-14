@@ -223,7 +223,12 @@ def build_assistant(full_name: str | None = None) -> dict:
             # validation call previously in this project - the bare "gpt-realtime-mini"
             # name was rejected with a 400 listing all valid model.model values, which
             # also included a newer "gpt-realtime-2" that hasn't been tried here yet).
-            "model": "gpt-realtime-mini-2025-12-15",
+            # Upgraded mini -> full "gpt-realtime-2025-08-28" (confirmed valid via a live
+            # POST /assistant validation call) after the mini model kept talking over the
+            # caller mid-answer even with startSpeakingPlan tuned below - Vapi's own docs
+            # list the full model, not mini, as the one built for "highest quality voice
+            # interactions" and structured multi-turn flows like this one's Q1-Q5 script.
+            "model": "gpt-realtime-2025-08-28",
             "temperature": 0.3,
             "messages": [{"role": "system", "content": system_prompt}],
         },
@@ -249,9 +254,32 @@ def build_assistant(full_name: str | None = None) -> dict:
         # had a config pass validation but fail live once before, with
         # nova-3-phonecall). Watch the first live/test calls closely to confirm whether
         # this actually delays responses by ~2s, or is silently ignored.
+        # smartEndpointingPlan judges turn-end semantically (is the utterance actually
+        # complete) instead of by silence duration alone, so a caller pausing mid-answer
+        # doesn't get cut off. Provider "vapi" (generic/non-English) was tried first and
+        # the caller still got talked over mid-answer live, so switched to "livekit" -
+        # Vapi's docs explicitly recommend livekit specifically for English conversations
+        # (this call is English), vapi's own provider only as a fallback when livekit
+        # isn't suitable. Also dropped waitSeconds 2.0 -> 0.5: that 2s figure was added
+        # to paper over the endpointing firing too early, but made every response feel
+        # sluggish instead of the natural speech-to-speech back-and-forth this model is
+        # supposed to give - now that endpointing itself is tuned, only a small buffer
+        # after real end-of-turn is needed. Vapi's docs don't confirm any of
+        # startSpeakingPlan is honored for a realtime model's internal turn-taking
+        # specifically (schema acceptance isn't proof of a functional effect) - watch the
+        # next live calls closely for both directions: talked-over-mid-answer, and
+        # dead air before the assistant responds.
         "startSpeakingPlan": {
-            "waitSeconds": 2.0,
+            "waitSeconds": 0.5,
+            "smartEndpointingPlan": {
+                "provider": "livekit",
+            },
         },
+        # backgroundSound: phone calls default to Vapi's "office" ambient background
+        # noise (confirmed via Vapi's docs) - that's the "office voice"/background
+        # chatter reported live. Web/browser test calls already default to "off", which
+        # is why this wasn't noticed via the Test call page, only on a real phone call.
+        "backgroundSound": "off",
         # analysisPlan.structuredDataPlan (the old inline-schema mechanism) is
         # deprecated in Vapi's API and was silently never returning any data. The
         # current mechanism is a separately-created StructuredOutput resource
