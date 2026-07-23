@@ -100,6 +100,20 @@ def import_leads_csv(db: Session, file_bytes: bytes, filename: str = "") -> dict
     return {"imported": imported, "duplicates_skipped": duplicates, "invalid_numbers": invalid}
 
 
+def create_lead(db: Session, phone: str, full_name: str | None = None) -> Lead:
+    normalized = normalize_pk_phone(phone)
+    if not normalized:
+        raise ValueError("Invalid phone number")
+    existing = db.query(Lead).filter(Lead.phone == normalized).first()
+    if existing:
+        raise ValueError("A lead with this phone number already exists")
+    lead = Lead(phone=normalized, full_name=full_name or None)
+    db.add(lead)
+    db.commit()
+    db.refresh(lead)
+    return lead
+
+
 TEST_LEAD_PHONE = "+923000000000"
 
 

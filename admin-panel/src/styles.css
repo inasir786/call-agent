@@ -188,6 +188,23 @@ h2 { font-family: var(--display); font-size: 15px; font-weight: 600; margin-bott
 .filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .filters input { flex: 1; min-width: 220px; }
 
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 24px;
+  width: 380px;
+  max-width: 90vw;
+}
+.modal h2 { margin: 0 0 18px; font-size: 18px; }
+.modal .field { margin-bottom: 14px; }
+.modal .actions { justify-content: flex-end; margin-top: 18px; }
+
 input, select {
   font-family: var(--body);
   font-size: 14px;

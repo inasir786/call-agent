@@ -68,6 +68,11 @@ class LeadListOut(BaseModel):
     items: List[LeadOut]
 
 
+class LeadCreate(BaseModel):
+    phone: str
+    full_name: Optional[str] = None
+
+
 class ImportResult(BaseModel):
     imported: int
     duplicates_skipped: int

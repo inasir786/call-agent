@@ -3,19 +3,27 @@ import re
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 
 
-def normalize_pk_phone(raw: str) -> str | None:
+def normalize_phone(raw: str) -> str | None:
     if not raw:
         return None
     digits = re.sub(r"\D", "", raw)
-    if digits.startswith("0092"):
-        digits = digits[4:]
-    elif digits.startswith("92"):
+    if not digits:
+        return None
+    if digits.startswith("00"):
         digits = digits[2:]
-    elif digits.startswith("0"):
-        digits = digits[1:]
+    # Bare Pakistani mobile entered without a country code, e.g. "03001234567" or "3001234567"
+    if len(digits) == 11 and digits.startswith("03"):
+        return f"+92{digits[1:]}"
     if len(digits) == 10 and digits.startswith("3"):
         return f"+92{digits}"
+    # Any other number already carrying its own country code (E.164 allows 8-15 digits)
+    if 8 <= len(digits) <= 15:
+        return f"+{digits}"
     return None
+
+
+# Backwards-compatible alias — kept for any lingering imports.
+normalize_pk_phone = normalize_phone
 
 
 def is_valid_email(value: str | None) -> bool:

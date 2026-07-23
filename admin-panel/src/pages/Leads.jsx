@@ -13,6 +13,11 @@ export default function Leads() {
   const [page, setPage] = useState(1)
   const [message, setMessage] = useState("")
   const [resetting, setResetting] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [addName, setAddName] = useState("")
+  const [addPhone, setAddPhone] = useState("")
+  const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState("")
   const fileRef = useRef()
   const pageSize = 25
 
@@ -76,6 +81,29 @@ export default function Leads() {
     fileRef.current.value = ""
   }
 
+  const openAddModal = () => {
+    setAddName("")
+    setAddPhone("+")
+    setAddError("")
+    setShowAddModal(true)
+  }
+
+  const submitAddLead = async (e) => {
+    e.preventDefault()
+    setAdding(true)
+    setAddError("")
+    try {
+      await api("/api/leads", { method: "POST", body: { phone: addPhone, full_name: addName || null } })
+      setShowAddModal(false)
+      setMessage("Lead added")
+      load()
+    } catch (err) {
+      setAddError(err.message)
+    } finally {
+      setAdding(false)
+    }
+  }
+
   const exportCsv = async (path, filename) => {
     const response = await fetch(path, {
       headers: { Authorization: `Bearer ${getToken()}` },
@@ -98,6 +126,7 @@ export default function Leads() {
         <div className="actions">
           <input type="file" accept=".csv,.xlsx,.xls" ref={fileRef} onChange={importCsv} hidden />
           <button className="btn" onClick={() => fileRef.current.click()}>Import CSV/Excel</button>
+          <button className="btn" onClick={openAddModal}>Add lead</button>
           <button className="btn" onClick={resetAll} disabled={resetting}>
             {resetting ? "Resetting..." : "Reset all to pending"}
           </button>
@@ -105,6 +134,39 @@ export default function Leads() {
         </div>
       </div>
       {message && <div className="notice">{message}</div>}
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Add lead</h2>
+            <form onSubmit={submitAddLead}>
+              <div className="field">
+                <label>Name</label>
+                <input value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="Full name (optional)" />
+              </div>
+              <div className="field">
+                <label>Phone number</label>
+                <input
+                  value={addPhone}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setAddPhone(v.startsWith("+") ? v : `+${v}`)
+                  }}
+                  placeholder="+14155551234"
+                  required
+                  autoFocus
+                />
+              </div>
+              {addError && <div className="notice">{addError}</div>}
+              <div className="actions">
+                <button type="button" className="btn ghost" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="submit" className="btn primary" disabled={adding}>
+                  {adding ? "Adding..." : "Add lead"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       <div className="filters">
         <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }}>
           {STATUSES.map((s) => (

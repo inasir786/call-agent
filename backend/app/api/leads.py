@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.models import Lead, LeadStatus
-from app.schemas.schemas import LeadListOut, LeadDetailOut, ImportResult, ResetResult, ReviewDecision
+from app.schemas.schemas import LeadListOut, LeadDetailOut, LeadOut, LeadCreate, ImportResult, ResetResult, ReviewDecision
 from app.services import lead_service
 from app.utils.security import require_admin
 
@@ -16,6 +16,14 @@ async def import_leads(file: UploadFile = File(...), db: Session = Depends(get_d
         raise HTTPException(status_code=400, detail="Please upload a CSV or Excel (.xlsx/.xls) file")
     content = await file.read()
     return lead_service.import_leads_csv(db, content, file.filename)
+
+
+@router.post("", response_model=LeadOut)
+def create_lead(payload: LeadCreate, db: Session = Depends(get_db)):
+    try:
+        return lead_service.create_lead(db, payload.phone, payload.full_name)
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err))
 
 
 @router.post("/reset-all", response_model=ResetResult)
