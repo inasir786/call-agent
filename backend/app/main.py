@@ -6,8 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config.database import Base, engine
 from app.api import auth, leads, campaign, webhooks, export, crm, assistant
 from app.workers.dialer_worker import dialer_loop
+from app.config.settings import settings
 from app.services.assistant_prompt import ANALYSIS_SCHEMA, ANALYSIS_INSTRUCTIONS
-from app.services.structured_output_service import ensure_structured_output
+from app.services.structured_output_service import (
+    ensure_structured_output,
+    ensure_assistant_structured_output,
+)
 import app.models
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -17,6 +21,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     ensure_structured_output(ANALYSIS_SCHEMA, ANALYSIS_INSTRUCTIONS)
+    ensure_assistant_structured_output(settings.vapi_assistant_id)
     task = asyncio.create_task(dialer_loop())
     yield
     task.cancel()

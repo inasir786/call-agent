@@ -47,8 +47,8 @@ Never confirm eligibility or admission yourself either way — only an advisor c
 
 Q5 - FINANCIAL LEVER + HANDOFF: Ask whether a scholarship or installment plan would make a difference to their decision. Then let them know a real advisor will call today or tomorrow already knowing everything discussed. Run CALLBACK SCHEDULING to completion — that means waiting for the caller's actual reply to "is that correct?" about the callback time before doing anything else; asking that question is not the end of this step, hearing a real reply to it is.
 HARD GATE: the email step below is mandatory and always comes immediately after the callback time is confirmed — there is no path through Q5 that skips it, and confirming the callback time is never itself a reason to move to the closing line.
-{email_ask_instruction}{email_override_clause} Read it back once, plainly, and ask once "is that correct?" Then move straight to the closing flow no matter what they answer — never re-ask, re-spell, or re-confirm; if they said it was wrong, just say an advisor will confirm it directly, then continue. ABSOLUTE LIMIT: once you have said "is that correct?" about the email one time, the email topic is permanently closed for the rest of the call, no matter what the caller says next (even "no," "wrong," or anything else) — never say the word "email" again in this call after that point, for any reason. Emails are often a name mashed with numbers, no clear breaks (e.g. "vicahmed2@gmail.com") — capture the exact letters/digits given, don't guess word breaks.
-This entire Q5 sequence — scholarship question, callback time, email — runs exactly once, in this order, and only here. Never repeat any part of it later in the call, and never run any part of it before Q4 has been asked. Never give the closing line until the email step has actually happened. Once the email step is done, the only question left before the closing line is "Is there anything else you'd like to know?" (per the Rules) — do NOT ask "would they like someone to reach out with more information" (that's already been fully handled by this Q5 sequence), do NOT run CALLBACK SCHEDULING again, do NOT ask for the time or email again in any form.
+{email_ask_instruction}{email_override_clause} Read the full address back spelled out, letter by letter, and ask "is that correct?" — then wait for their actual reply. Only a clear yes/correct/that's right closes the email step. If they say no or correct any part: take their correction, ask them to re-spell just the unclear part if you're not sure you caught it, then read the FULL corrected address back and ask "is that correct?" again — repeat this correct-and-confirm cycle as many times as needed until they clearly say yes. YOU are responsible for getting the email right on this call: NEVER say an advisor will confirm, verify, or ask for their email, never hand the email off to anyone else, and if the caller asks you to repeat the email you have, read it back spelled out and confirm it again — even after this step is otherwise done. A "no" or a correction is never a reason to drop the email topic. Only give up if the line is truly hopeless — three full read-backs in a row all rejected — in which case say something brief and warm like "No problem, we'll sort it out another way," treat the email as NOT captured (never record an unconfirmed guess), and continue. Emails are often a name mashed with numbers, no clear breaks (e.g. "vicahmed2@gmail.com") — capture the exact letters/digits given, don't guess word breaks.
+This entire Q5 sequence — scholarship question, callback time, email — runs exactly once, in this order, and only here. Never repeat any part of it later in the call on your own initiative, and never run any part of it before Q4 has been asked. Never give the closing line until the email step has actually happened. Once the email step is done, the only question left before the closing line is "Is there anything else you'd like to know?" (per the Rules) — do NOT ask "would they like someone to reach out with more information" (that's already been fully handled by this Q5 sequence), do NOT run CALLBACK SCHEDULING again, do NOT re-ask for the time or email on your own initiative. One exception, always allowed: if the CALLER brings the email up again (asks you to repeat it, or wants to correct it), read back what you have spelled out and confirm it per the email step's own rules — never refuse that, and never tell them an advisor will confirm it instead.
 
 Rules:
 - Only ever ask the specific questions defined above (opening, Q1-Q5) — never ask anything else or improvise a different question. Answer strictly from what's written in this prompt, never outside it.
@@ -61,19 +61,20 @@ Rules:
 - If the caller starts talking or asks a question while you're still mid-sentence, stop talking immediately — don't finish your sentence. Handle what they said (see the rules below), then resume exactly where you left off — re-ask whichever question was pending rather than skipping it or restarting. If you notice you've already said several different fragments or rephrasings back to back because of an interruption, do NOT try to patch them together or keep adding more — stop, and say the pending question once, cleanly, as a single fresh sentence. Never stack multiple partial attempts into one turn.
 - Questions answerable from this script (scholarships/installments, the ASU pathway differentiator, Master's/hybrid) — answer briefly using only that information, then continue with the pending question.
 - Questions about NIT itself covered in NIT_KNOWLEDGE — answer in one short, natural sentence, never the whole paragraph, then go back to the pending question.
-- Questions about NIT not covered anywhere above (fees, deadlines, departments, scholarship amounts, hostels, admission dates, visa, campus facilities) — don't guess, say: "I'm sorry, I don't have that information. Please contact the NIT team, they'll be happy to help you." Then continue.
-- Questions with nothing to do with NIT at all — say: "I'm sorry, I can only answer questions related to NIT." Then continue — don't get drawn into a general conversation.
+- Questions about NIT not covered anywhere above (fees, deadlines, departments, scholarship amounts, hostels, admission dates, visa, campus facilities) — don't guess, say: "I'm sorry, I don't have that information. Please contact the N I T team, they'll be happy to help you." Then continue.
+- Questions with nothing to do with NIT at all — say: "I'm sorry, I can only answer questions related to N I T." Then continue — don't get drawn into a general conversation.
 - "NIT" is often mis-transcribed as similar sounds ("an ID," "a knit"). If a caller's odd phrase makes sense with "NIT" swapped in, treat it as a NIT question, not unrelated.
 - Never make promises about fees, scholarships, or admission approval. Never confirm eligibility or admission yourself — always defer to "an advisor will confirm."
 - Only record information exactly as the caller said it — never guess, normalize, or invent a plausible-sounding answer.
+- The university's name is spoken letter by letter: always write it as "N I T" (three separate letters, with spaces) in everything you say aloud — never as the single word "NIT", which the voice would pronounce like the English word "nit".
 - Be warm, respectful, and brief at all times."""
 
 # Kept under 120 characters (same limit applied to every Q1-Q5 question in the
 # system prompt below), with margin for longer first names — this is a fixed
 # firstMessage string sent to Vapi directly, not LLM-generated, so the prompt's
 # character-limit rule can't enforce it; it has to be hand-kept short here instead.
-FIRST_MESSAGE_WITH_NAME = "Assalam-o-alaikum {first_name}, this is Aisha from NIT, powered by ASU. You enquired before - got two minutes?"
-FIRST_MESSAGE_GENERIC = "Assalam-o-alaikum! This is Aisha from NIT, powered by ASU. You enquired before - got two minutes?"
+FIRST_MESSAGE_WITH_NAME = "Assalam-o-alaikum {first_name}, this is Aisha from N I T, powered by ASU. You enquired before - got two minutes?"
+FIRST_MESSAGE_GENERIC = "Assalam-o-alaikum! This is Aisha from N I T, powered by ASU. You enquired before - got two minutes?"
 
 # Plain types only (no "type": ["string", "null"] unions) and no forced "required" /
 # "additionalProperties" — matching Vapi's own documented working structuredDataPlan
@@ -146,7 +147,16 @@ ANALYSIS_SCHEMA = {
         },
         "advisor_callback_email": {
             "type": "string",
-            "description": "The caller's email for the confirmation, exactly as spelled out and explicitly confirmed correct by the caller. Omit if never captured or not confirmed.",
+            "description": (
+                "The caller's email as a real, usable address (like name@domain.com), "
+                "reconstructed from the spelling the caller explicitly confirmed with a "
+                "clear yes — use the LAST version they confirmed or corrected to. Unlike "
+                "other fields, assembling this one is expected: join spelled-out letters, "
+                "convert spoken 'at'/'at the rate' to @, 'dot' to '.', letter names like "
+                "'zed' to 'z', lowercase everything, no spaces. Do NOT invent parts that "
+                "were never spelled; omit entirely if no version was ever clearly "
+                "confirmed by the caller."
+            ),
         },
     },
 }
@@ -181,9 +191,13 @@ def build_assistant(full_name: str | None = None) -> dict:
         first_message = FIRST_MESSAGE_GENERIC
 
     email_ask_instruction = (
-        'Ask them to spell out their email letter by letter (e.g. "Could you share '
-        'your email, letter by letter?"), then stay silent until they\'ve fully '
-        'finished — username, "at", domain, extension.'
+        'Ask them to spell out their email slowly, one letter at a time (e.g. "Could '
+        'you spell out your email for me, one letter at a time?"), then stay silent '
+        'until they\'ve fully finished — username, "at", domain, extension. Letters '
+        'that sound alike over a phone line (e.g. "b"/"p", "d"/"t", "m"/"n", "s"/"f") '
+        'are easy to mishear, especially with a Pakistani accent — if any single letter '
+        'is unclear, ask them to confirm just that one using a reference word (e.g. '
+        '"was that \'b\' as in bravo, or \'p\' as in papa?") instead of guessing.'
     )
     if first_name.lower() == "malaika":
         # Embedded directly inside Q5's email sentence (not appended after the whole
@@ -223,12 +237,12 @@ def build_assistant(full_name: str | None = None) -> dict:
             # validation call previously in this project - the bare "gpt-realtime-mini"
             # name was rejected with a 400 listing all valid model.model values, which
             # also included a newer "gpt-realtime-2" that hasn't been tried here yet).
-            # Upgraded mini -> full "gpt-realtime-2025-08-28" (confirmed valid via a live
-            # POST /assistant validation call) after the mini model kept talking over the
-            # caller mid-answer even with startSpeakingPlan tuned below - Vapi's own docs
-            # list the full model, not mini, as the one built for "highest quality voice
-            # interactions" and structured multi-turn flows like this one's Q1-Q5 script.
-            "model": "gpt-realtime-2025-08-28",
+            # Briefly tried the full "gpt-realtime-2025-08-28" model instead of mini to
+            # see if it talked over callers less, but moved back to mini at the user's
+            # explicit request - the turn-taking fix is carried by startSpeakingPlan
+            # below (livekit smart endpointing + a short wait), not by the model choice,
+            # so this doesn't undo that fix.
+            "model": "gpt-realtime-mini-2025-12-15",
             "temperature": 0.3,
             "messages": [{"role": "system", "content": system_prompt}],
         },
@@ -258,19 +272,26 @@ def build_assistant(full_name: str | None = None) -> dict:
         # complete) instead of by silence duration alone, so a caller pausing mid-answer
         # doesn't get cut off. Provider "vapi" (generic/non-English) was tried first and
         # the caller still got talked over mid-answer live, so switched to "livekit" -
-        # Vapi's docs explicitly recommend livekit specifically for English conversations
-        # (this call is English), vapi's own provider only as a fallback when livekit
-        # isn't suitable. Also dropped waitSeconds 2.0 -> 0.5: that 2s figure was added
-        # to paper over the endpointing firing too early, but made every response feel
-        # sluggish instead of the natural speech-to-speech back-and-forth this model is
-        # supposed to give - now that endpointing itself is tuned, only a small buffer
-        # after real end-of-turn is needed. Vapi's docs don't confirm any of
-        # startSpeakingPlan is honored for a realtime model's internal turn-taking
-        # specifically (schema acceptance isn't proof of a functional effect) - watch the
-        # next live calls closely for both directions: talked-over-mid-answer, and
-        # dead air before the assistant responds.
+        # Vapi's docs explicitly recommend livekit specifically for English conversations,
+        # and a real test call on this combo (mini model + livekit) got no cutoff
+        # complaints, only a latency one - so keep livekit, don't risk regressing that.
+        # Tried "krisp" next hoping its audio-based (no-transcript-wait) analysis would
+        # cut latency, but it's REJECTED by Vapi's live schema - the only valid provider
+        # values are vapi/livekit/custom-endpointing-model (confirmed via a live POST
+        # /assistant call), so that doc's mention of krisp/deepgram-flux/assembly here
+        # was wrong. Pulled this call's real performanceMetrics from Vapi's API instead:
+        # modelLatency/voiceLatency were both 0 (the realtime model itself is effectively
+        # instant, audio-native, no separate STT/LLM/TTS hop) - the ~1.5s average turn
+        # latency is entirely Vapi's own orchestration-layer endpointing (livekit is
+        # text-based, so it waits for a transcript: transcriberLatency avg 336ms +
+        # endpointingLatency avg 627ms of that 1468ms). Since both valid smart providers
+        # share that transcript-wait cost, the only remaining lever that doesn't trade
+        # away cutoff-safety is waitSeconds itself - dropped 0.5 -> 0.2, since that's pure
+        # artificial delay added after the model has already decided to speak, not part
+        # of the turn-end decision. Watch the next live calls' performanceMetrics to
+        # confirm turnLatencyAverage actually drops without cutoff complaints returning.
         "startSpeakingPlan": {
-            "waitSeconds": 0.5,
+            "waitSeconds": 0.2,
             "smartEndpointingPlan": {
                 "provider": "livekit",
             },

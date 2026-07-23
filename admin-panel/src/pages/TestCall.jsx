@@ -144,7 +144,7 @@ export default function TestCall() {
     setEventLog([])
     setTestLeadId(null)
     try {
-      const { assistant, public_key, test_lead_id } = await api("/api/assistant/preview")
+      const { assistant, assistant_id, public_key, test_lead_id } = await api("/api/assistant/preview")
       if (!public_key) {
         setError("VAPI_PUBLIC_KEY is not set in the backend .env")
         setStatus("idle")
@@ -216,7 +216,10 @@ export default function TestCall() {
       // makes it show up in the end-of-call-report webhook's call.metadata, the same
       // field process_call_result() reads for real phone calls — this is what lets
       // this test call go through the exact same DB-writing pipeline as a real one.
-      await vapi.start(assistant, { metadata: { lead_id: test_lead_id } })
+      // If the backend is configured with a saved dashboard assistant, start with its
+      // ID (the exact config real phone calls use); otherwise fall back to the inline
+      // assistant built from assistant_prompt.py.
+      await vapi.start(assistant_id || assistant, { metadata: { lead_id: test_lead_id } })
     } catch (err) {
       setError(describeError(err))
       setStatus("idle")

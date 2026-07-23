@@ -24,6 +24,11 @@ def preview_assistant(db: Session = Depends(get_db)):
         assistant.pop("server", None)
     return {
         "assistant": assistant,
+        # When set, the test page starts the call with this saved assistant ID (same
+        # path real phone calls take) instead of the inline assistant above. Note the
+        # Malaika email read-back override in build_assistant() can't be injected into
+        # a saved assistant, so it doesn't apply in that mode.
+        "assistant_id": settings.vapi_assistant_id or None,
         "public_key": settings.vapi_public_key,
         "test_lead_id": test_lead.id,
     }

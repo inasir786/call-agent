@@ -11,6 +11,9 @@ class Settings(BaseSettings):
 
     vapi_api_key: str = ""
     vapi_public_key: str = ""
+    # When set, calls use this saved dashboard assistant (assistantId) instead of the
+    # transient inline assistant built from assistant_prompt.py.
+    vapi_assistant_id: str = ""
     vapi_phone_number_id: str = ""
     vapi_webhook_secret: str = ""
     vapi_server_url: str = ""

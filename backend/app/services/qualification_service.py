@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from app.models import Lead, LeadStatus, Call
 from app.config.settings import settings
+from app.utils.phone import normalize_spoken_email
 
 logger = logging.getLogger("qualification")
 
@@ -168,7 +169,13 @@ def _apply_extracted_data(lead: Lead, data: dict, transcript: str) -> None:
     lead.meets_baseline = _to_bool(data.get("meets_baseline"))
     lead.advisor_callback_time = data.get("advisor_callback_time")
     if data.get("advisor_callback_email"):
-        lead.email = data.get("advisor_callback_email")
+        # Normalize spoken/spelled transcript forms ("name dot x at gmail dot com")
+        # into a real address and validate; an email that doesn't survive that is
+        # never stored on the lead (the raw value stays visible in
+        # call.extracted_data for manual review).
+        normalized_email = normalize_spoken_email(str(data.get("advisor_callback_email")))
+        if normalized_email:
+            lead.email = normalized_email
 
     timeline = lead.timeline
     enrolled_late = (
